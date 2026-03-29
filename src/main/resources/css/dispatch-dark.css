@@ -1,0 +1,190 @@
+/* ============================================================
+   Dispatch — Challenger Deep theme
+   Overrides AtlantaFX base dark theme with the CD palette.
+   ============================================================ */
+
+* {
+  /* Font */
+  -fx-font-family: "JetBrains Mono";
+
+  /* Challenger Deep color variables */
+  -cd-bg:           #1e1c31;
+  -cd-bg-alt:       #2a2740;
+  -cd-bg-highlight: #3d3b53;
+  -cd-border:       #565575;
+  -cd-fg:           #cbe3e7;
+  -cd-fg-dim:       #a6b3cc;
+
+  -cd-red:          #ff8080;
+  -cd-green:        #95ffa4;
+  -cd-yellow:       #ffe9aa;
+  -cd-blue:         #91ddff;
+  -cd-magenta:      #c991e1;
+  -cd-cyan:         #aaffe4;
+  -cd-white:        #cbe3e7;
+
+  -cd-accent:       #91ddff;
+  -cd-success:      #95ffa4;
+  -cd-warning:      #ffe9aa;
+  -cd-error:        #ff8080;
+  -cd-purple:       #c991e1;
+}
+
+.root {
+  -fx-background-color: -cd-bg;
+  -fx-base: -cd-bg;
+}
+
+.label {
+  -fx-text-fill: -cd-fg;
+}
+
+.text-field,
+.text-area {
+  -fx-background-color: -cd-bg-alt;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+}
+
+.text-field:focused,
+.text-area:focused {
+  -fx-border-color: -cd-accent;
+}
+
+.button {
+  -fx-background-color: -cd-bg-alt;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-cursor: hand;
+}
+
+.button:hover {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.button:pressed {
+  -fx-background-color: -cd-border;
+}
+
+.button.accent {
+  -fx-background-color: -cd-accent;
+  -fx-text-fill: -cd-bg;
+  -fx-border-color: transparent;
+}
+
+.button.accent:hover {
+  -fx-opacity: 0.85;
+}
+
+.list-view {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+}
+
+.list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+}
+
+.list-cell:hover {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.list-cell:selected {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-accent;
+}
+
+.table-view {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+}
+
+.table-row-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+}
+
+.table-row-cell:odd {
+  -fx-background-color: -cd-bg;
+}
+
+.table-row-cell:hover {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.table-row-cell:selected {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.table-column-header {
+  -fx-background-color: -cd-bg;
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.split-pane {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0;
+}
+
+.split-pane-divider {
+  -fx-background-color: -cd-border;
+  -fx-padding: 1px;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+  -fx-background-color: -cd-bg-alt;
+}
+
+.tab {
+  -fx-background-color: -cd-bg-alt;
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.tab:selected {
+  -fx-background-color: -cd-bg;
+  -fx-text-fill: -cd-fg;
+}
+
+.tab:hover {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.scroll-bar {
+  -fx-background-color: -cd-bg-alt;
+}
+
+.scroll-bar .thumb {
+  -fx-background-color: -cd-border;
+  -fx-background-radius: 4px;
+}
+
+.scroll-bar .thumb:hover {
+  -fx-background-color: -cd-fg-dim;
+}
+
+/* Status badge helpers */
+.badge-success {
+  -fx-background-color: -cd-success;
+  -fx-text-fill: -cd-bg;
+  -fx-background-radius: 4px;
+  -fx-padding: 2px 6px;
+}
+
+.badge-error {
+  -fx-background-color: -cd-error;
+  -fx-text-fill: -cd-bg;
+  -fx-background-radius: 4px;
+  -fx-padding: 2px 6px;
+}
+
+.badge-warning {
+  -fx-background-color: -cd-warning;
+  -fx-text-fill: -cd-bg;
+  -fx-background-radius: 4px;
+  -fx-padding: 2px 6px;
+}
