@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="dev.dispatch.ui.MainController"
+    stylesheets="@/css/dispatch-dark.css">
+
+  <center>
+    <VBox alignment="CENTER" spacing="12">
+      <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+      </padding>
+      <Label fx:id="statusLabel" text="Dispatch" style="-fx-font-size: 24px; -fx-text-fill: #91ddff;"/>
+      <Label text="Host list coming soon." style="-fx-text-fill: #a6b3cc;"/>
+    </VBox>
+  </center>
+
+</BorderPane>
