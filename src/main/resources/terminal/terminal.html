@@ -5,10 +5,10 @@
   <style>{{XTERM_CSS}}</style>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1c31; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; }
     #terminal { width: 100%; height: 100%; padding: 4px; }
     .xterm { height: 100%; }
-    .xterm-viewport { background: #1e1c31 !important; }
+    .xterm-viewport { background: #0d1117 !important; }
   </style>
 </head>
 <body>
@@ -17,27 +17,29 @@
 <script>
   const term = new Terminal({
     theme: {
-      background:    '#1e1c31',
-      foreground:    '#cbe3e7',
-      cursor:        '#91ddff',
-      cursorAccent:  '#1e1c31',
-      selectionBackground: '#3d3b53',
-      black:         '#1e1c31',
-      red:           '#ff8080',
-      green:         '#95ffa4',
-      yellow:        '#ffe9aa',
-      blue:          '#91ddff',
-      magenta:       '#c991e1',
-      cyan:          '#aaffe4',
-      white:         '#cbe3e7',
-      brightBlack:   '#565575',
-      brightRed:     '#ff8080',
-      brightGreen:   '#95ffa4',
-      brightYellow:  '#ffe9aa',
-      brightBlue:    '#91ddff',
-      brightMagenta: '#c991e1',
-      brightCyan:    '#aaffe4',
-      brightWhite:   '#cbe3e7',
+      background:    '#0d1117',
+      foreground:    '#e6edf3',
+      cursor:        '#58a6ff',
+      cursorAccent:  '#0d1117',
+      selectionBackground: '#264f7899',
+      // Normal ANSI colors 0–7
+      black:         '#1c2128',
+      red:           '#ff5555',
+      green:         '#3fb950',
+      yellow:        '#d29922',
+      blue:          '#388bfd',
+      magenta:       '#a371f7',
+      cyan:          '#39c5cf',
+      white:         '#e6edf3',
+      // Bright ANSI colors 8–15
+      brightBlack:   '#484f58',
+      brightRed:     '#ff7b72',
+      brightGreen:   '#56d364',
+      brightYellow:  '#e3b341',
+      brightBlue:    '#79c0ff',
+      brightMagenta: '#d2a8ff',
+      brightCyan:    '#56d4dc',
+      brightWhite:   '#ffffff',
     },
     fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", monospace',
     fontSize: 13,

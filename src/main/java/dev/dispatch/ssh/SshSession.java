@@ -133,8 +133,11 @@ public class SshSession {
     log.debug("Opening shell on {} ({}x{})", host.getName(), columns, rows);
     try {
       ChannelShell channel = minaSession.createShellChannel();
-      // Request a PTY so the remote shell behaves as an interactive terminal
+      // Request a PTY so the remote shell behaves as an interactive terminal.
+      // Override the default vt100 type with xterm-256color so programs on the server
+      // (ls, git, vim, etc.) know they can emit 256-color ANSI escape sequences.
       channel.setupSensibleDefaultPty();
+      channel.setPtyType("xterm-256color");
       channel.setPtyColumns(columns);
       channel.setPtyLines(rows);
       channel.open().verify(EXEC_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
