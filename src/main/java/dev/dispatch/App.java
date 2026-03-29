@@ -1,6 +1,9 @@
 package dev.dispatch;
 
 import atlantafx.base.theme.NordDark;
+import dev.dispatch.ssh.SshService;
+import dev.dispatch.storage.DatabaseManager;
+import dev.dispatch.ui.MainController;
 import java.io.IOException;
 import java.io.InputStream;
 import javafx.application.Application;
@@ -11,15 +14,21 @@ import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** JavaFX entry point for Dispatch. Bootstraps theme, fonts, and the main window. */
+/** JavaFX entry point. Creates application services and wires them into the main window. */
 public class App extends Application {
 
   private static final Logger log = LoggerFactory.getLogger(App.class);
+
+  private DatabaseManager dbManager;
+  private SshService sshService;
 
   @Override
   public void start(Stage stage) throws IOException {
     loadFonts();
     Application.setUserAgentStylesheet(new NordDark().getUserAgentStylesheet());
+
+    dbManager = new DatabaseManager();
+    sshService = new SshService();
 
     FXMLLoader loader =
         new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
@@ -27,15 +36,24 @@ public class App extends Application {
     scene.getStylesheets().add(
         getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
+    MainController ctrl = loader.getController();
+    ctrl.init(dbManager, sshService);
+
     stage.setTitle("Dispatch");
     stage.setScene(scene);
     stage.show();
     log.info("Dispatch started");
   }
 
+  @Override
+  public void stop() {
+    log.info("Shutting down");
+    if (sshService != null) sshService.close();
+    if (dbManager != null) dbManager.close();
+  }
+
   private void loadFonts() {
-    // Fonts must be placed in src/main/resources/fonts/JetBrainsMono/
-    // Download from: https://www.jetbrains.com/lp/mono/
+    // Place fonts in src/main/resources/fonts/JetBrainsMono/ — download from jetbrains.com/lp/mono
     loadFont("/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf");
     loadFont("/fonts/JetBrainsMono/JetBrainsMono-Bold.ttf");
   }

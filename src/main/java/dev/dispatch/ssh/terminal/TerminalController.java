@@ -7,6 +7,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import org.apache.sshd.client.channel.ChannelShell;
@@ -49,8 +51,70 @@ public class TerminalController {
   public Node createNode() {
     webView = new WebView();
     webView.setContextMenuEnabled(false);
+    installCtrlKeyFilter(webView);
     loadTerminalPage(webView.getEngine());
     return webView;
+  }
+
+  /**
+   * Intercepts Ctrl+key combinations at the JavaFX level before WebView can absorb them
+   * (e.g. Ctrl+L = "focus address bar" in browser context) and forwards the correct VT100
+   * control sequence directly to the SSH channel.
+   */
+  private void installCtrlKeyFilter(WebView view) {
+    view.addEventFilter(
+        KeyEvent.KEY_PRESSED,
+        event -> {
+          if (!event.isControlDown() || bridge == null) return;
+
+          if (event.getCode() == KeyCode.L) {
+            // Erase full screen + cursor-home directly in xterm.js (fully blank, no kept line),
+            // then send \x0c so the shell redraws exactly one prompt at the top.
+            // Using term.clear() instead keeps the current line, causing a duplicate prompt.
+            event.consume();
+            view.getEngine().executeScript("term.write('\\x1b[H\\x1b[2J')");
+            bridge.sendInput("\u000C");
+            return;
+          }
+
+          String seq = ctrlSequence(event.getCode());
+          if (seq != null) {
+            event.consume();
+            bridge.sendInput(seq);
+          }
+        });
+  }
+
+  /** Maps Ctrl+A … Ctrl+Z to their VT100 control-character sequences. */
+  private static String ctrlSequence(KeyCode code) {
+    return switch (code) {
+      case A -> "\u0001"; // SOH  — beginning of line (readline)
+      case B -> "\u0002"; // STX  — back one char (readline)
+      case C -> "\u0003"; // ETX  — SIGINT
+      case D -> "\u0004"; // EOT  — EOF / logout
+      case E -> "\u0005"; // ENQ  — end of line (readline)
+      case F -> "\u0006"; // ACK  — forward one char (readline)
+      case G -> "\u0007"; // BEL  — cancel / bell
+      case H -> "\u0008"; // BS   — backspace
+      case J -> "\n";     // LF   — newline
+      case K -> "\u000B"; // VT   — kill to end of line (readline)
+      case N -> "\u000E"; // SO   — next history entry (readline)
+      case P -> "\u0010"; // DLE  — previous history entry (readline)
+      case Q -> "\u0011"; // DC1  — XON (resume output)
+      case R -> "\u0012"; // DC2  — reverse history search (readline)
+      case S -> "\u0013"; // DC3  — XOFF (pause output)
+      case T -> "\u0014"; // DC4  — transpose chars (readline)
+      case U -> "\u0015"; // NAK  — kill whole line (readline)
+      case V -> "\u0016"; // SYN  — literal next char
+      case W -> "\u0017"; // ETB  — kill previous word (readline)
+      case X -> "\u0018"; // CAN  — cancel
+      case Y -> "\u0019"; // EM   — yank (readline)
+      case Z -> "\u001A"; // SUB  — SIGTSTP (suspend)
+      case OPEN_BRACKET  -> "\u001B"; // ESC
+      case BACK_SLASH    -> "\u001C"; // FS — SIGQUIT
+      case CLOSE_BRACKET -> "\u001D"; // GS
+      default -> null;
+    };
   }
 
   /** Closes the shell channel and releases resources. Call when the tab is closed. */

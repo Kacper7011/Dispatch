@@ -51,6 +51,13 @@ public class SshTerminalBridge {
     Thread.ofVirtual().name("ssh-output-pump").start(this::pumpSshOutput);
   }
 
+  /** Sends raw input data to the SSH session stdin. Safe to call from any thread. */
+  public void sendInput(String data) {
+    if (terminalHandler != null) {
+      terminalHandler.sendInput(data);
+    }
+  }
+
   /** Stops reading and closes the shell channel. */
   public void dispose() {
     running = false;
