@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>{{XTERM_CSS}}</style>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1c31; }
+    #terminal { width: 100%; height: 100%; padding: 4px; }
+    .xterm { height: 100%; }
+    .xterm-viewport { background: #1e1c31 !important; }
+  </style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>{{XTERM_JS}}</script>
+<script>
+  const term = new Terminal({
+    theme: {
+      background:    '#1e1c31',
+      foreground:    '#cbe3e7',
+      cursor:        '#91ddff',
+      cursorAccent:  '#1e1c31',
+      selectionBackground: '#3d3b53',
+      black:         '#1e1c31',
+      red:           '#ff8080',
+      green:         '#95ffa4',
+      yellow:        '#ffe9aa',
+      blue:          '#91ddff',
+      magenta:       '#c991e1',
+      cyan:          '#aaffe4',
+      white:         '#cbe3e7',
+      brightBlack:   '#565575',
+      brightRed:     '#ff8080',
+      brightGreen:   '#95ffa4',
+      brightYellow:  '#ffe9aa',
+      brightBlue:    '#91ddff',
+      brightMagenta: '#c991e1',
+      brightCyan:    '#aaffe4',
+      brightWhite:   '#cbe3e7',
+    },
+    fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", monospace',
+    fontSize: 13,
+    lineHeight: 1.2,
+    cursorBlink: true,
+    cursorStyle: 'block',
+    scrollback: 5000,
+    allowTransparency: false,
+    convertEol: false,
+  });
+
+  term.open(document.getElementById('terminal'));
+
+  // Forward keystrokes and clipboard pastes to Java
+  term.onData(data => {
+    if (window.javaTerminal) {
+      window.javaTerminal.sendInput(data);
+    }
+  });
+
+  // Notify Java of terminal size (cols x rows)
+  function notifyResize() {
+    if (window.javaTerminal) {
+      window.javaTerminal.resize(term.cols, term.rows);
+    }
+  }
+
+  // Recalculate terminal size when container resizes
+  const resizeObserver = new ResizeObserver(() => {
+    const container = document.getElementById('terminal');
+    const charWidth  = term._core._renderService.dimensions.css.cell.width;
+    const charHeight = term._core._renderService.dimensions.css.cell.height;
+    if (charWidth > 0 && charHeight > 0) {
+      const cols = Math.floor(container.clientWidth  / charWidth);
+      const rows = Math.floor(container.clientHeight / charHeight);
+      if (cols !== term.cols || rows !== term.rows) {
+        term.resize(cols, rows);
+        notifyResize();
+      }
+    }
+  });
+  resizeObserver.observe(document.getElementById('terminal'));
+
+  // Expose for Java to call term.write()
+  window.term = term;
+</script>
+</body>
+</html>

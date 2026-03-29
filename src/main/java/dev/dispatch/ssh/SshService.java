@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.sshd.client.SshClient;
+import org.apache.sshd.client.keyverifier.AcceptAllServerKeyVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +37,21 @@ public class SshService implements AutoCloseable {
 
   /** Creates the service and starts the underlying MINA SSH client. */
   public SshService() {
+    registerBouncyCastle();
     this.client = SshClient.setUpDefaultClient();
+    // Accept all host keys — homelab app, no TOFU verification needed.
+    // In a production app, use KnownHostsServerKeyVerifier instead.
+    this.client.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
     this.client.start();
     log.info("SshService started");
+  }
+
+  private void registerBouncyCastle() {
+    // Required for ed25519, ecdsa, and other modern key types not supported by the JDK alone.
+    if (java.security.Security.getProvider("BC") == null) {
+      java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+      log.debug("BouncyCastle security provider registered");
+    }
   }
 
   /**

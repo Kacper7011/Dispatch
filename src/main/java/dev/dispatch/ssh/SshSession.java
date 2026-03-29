@@ -68,6 +68,7 @@ public class SshSession {
       log.info("SSH session established: {}", host.getName());
     } catch (IOException e) {
       transitionTo(SessionState.DISCONNECTED);
+      log.error("Connection failed to {}: {}", host.getName(), e.getMessage(), e);
       throw new SshException("Failed to connect to " + host.getName() + ": " + e.getMessage(), e);
     }
   }
@@ -120,18 +121,24 @@ public class SshSession {
   }
 
   /**
-   * Opens a raw shell channel for use by the terminal emulator (JediTerm).
+   * Opens a PTY shell channel sized to the given terminal dimensions.
    *
+   * @param columns initial terminal width in characters
+   * @param rows    initial terminal height in characters
    * @return an open {@link ChannelShell} — caller is responsible for closing it
    * @throws SshException if the session is not connected
    */
-  public ChannelShell openShell() {
+  public ChannelShell openShell(int columns, int rows) {
     requireConnected();
-    log.debug("Opening shell on {}", host.getName());
+    log.debug("Opening shell on {} ({}x{})", host.getName(), columns, rows);
     try {
       ChannelShell channel = minaSession.createShellChannel();
+      // Request a PTY so the remote shell behaves as an interactive terminal
+      channel.setupSensibleDefaultPty();
+      channel.setPtyColumns(columns);
+      channel.setPtyLines(rows);
       channel.open().verify(EXEC_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-      log.info("Shell channel opened on {}", host.getName());
+      log.info("Shell opened on {} ({}x{})", host.getName(), columns, rows);
       return channel;
     } catch (IOException e) {
       throw new SshException("Failed to open shell on " + host.getName(), e);
