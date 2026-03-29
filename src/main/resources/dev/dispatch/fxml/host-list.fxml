@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="dev.dispatch.ui.host.HostListController"
+    prefWidth="240"
+    minWidth="200"
+    styleClass="sidebar"
+    spacing="0">
+
+  <Label text="HOSTS" styleClass="sidebar-header">
+    <VBox.margin><Insets top="12" right="12" bottom="8" left="12"/></VBox.margin>
+  </Label>
+
+  <ListView fx:id="hostListView" VBox.vgrow="ALWAYS" styleClass="host-list"/>
+
+  <VBox styleClass="sidebar-actions" spacing="6">
+    <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+
+    <Button fx:id="connectButton" text="Connect" maxWidth="Infinity"
+            onAction="#onConnect" styleClass="button-accent" disable="true">
+      <tooltip><Tooltip text="SSH terminal — implemented in next module"/></tooltip>
+    </Button>
+
+    <HBox spacing="6">
+      <Button fx:id="editButton" text="Edit" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+              onAction="#onEdit" disable="true"/>
+      <Button fx:id="deleteButton" text="Delete" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+              onAction="#onDelete" disable="true"/>
+    </HBox>
+
+    <Button text="+ Add Host" maxWidth="Infinity" onAction="#onAdd"/>
+  </VBox>
+
+</VBox>

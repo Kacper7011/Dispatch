@@ -182,6 +182,99 @@
   -fx-padding: 2px 6px;
 }
 
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
+.sidebar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-header {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-letter-spacing: 0.1em;
+}
+
+.sidebar-actions {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 1 0 0 0;
+}
+
+.host-list {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 4 0 4 0;
+}
+
+.host-list .list-cell {
+  -fx-background-color: transparent;
+  -fx-padding: 0;
+}
+
+.host-list .list-cell:hover {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.host-list .list-cell:selected {
+  -fx-background-color: -cd-bg-highlight;
+}
+
+.host-cell-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+}
+
+.host-cell-address {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+}
+
+/* ============================================================
+   Main content area
+   ============================================================ */
+
+.main-content {
+  -fx-background-color: -cd-bg;
+}
+
+.empty-state-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 14px;
+}
+
+/* ============================================================
+   Host form
+   ============================================================ */
+
+.form-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+}
+
+.form-error {
+  -fx-text-fill: -cd-error;
+  -fx-font-size: 12px;
+}
+
+.button-accent {
+  -fx-background-color: -cd-accent;
+  -fx-text-fill: -cd-bg;
+  -fx-border-color: transparent;
+  -fx-font-weight: bold;
+}
+
+.button-accent:hover {
+  -fx-opacity: 0.85;
+}
+
+.button-accent:disabled {
+  -fx-opacity: 0.4;
+}
+
 .badge-warning {
   -fx-background-color: -cd-warning;
   -fx-text-fill: -cd-bg;
