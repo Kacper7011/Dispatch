@@ -81,7 +81,7 @@ class SshSessionStateTest {
   @Test
   void openShell_throwsSshException_whenNotConnected() {
     SshSession session = new SshSession(testHost());
-    assertThrows(SshException.class, session::openShell);
+    assertThrows(SshException.class, () -> session.openShell(80, 24));
   }
 
   @Test

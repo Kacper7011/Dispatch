@@ -20,7 +20,7 @@ application {
 
 javafx {
   version = "21"
-  modules = listOf("javafx.controls", "javafx.fxml")
+  modules = listOf("javafx.controls", "javafx.fxml", "javafx.web")
 }
 
 repositories {
@@ -35,8 +35,9 @@ dependencies {
   implementation("org.apache.sshd:sshd-core:2.12.1")
   implementation("org.apache.sshd:sshd-sftp:2.12.1")
 
-  // Terminal emulator — add when implementing ssh/terminal module
-  // implementation("com.jediterm:jediterm-pty:3.45")
+  // BouncyCastle — required by MINA SSHD for ed25519, ecdsa, and modern key types
+  implementation("org.bouncycastle:bcpkix-jdk18on:1.77")
+  implementation("org.bouncycastle:bcprov-jdk18on:1.77")
 
   // Docker API
   implementation("com.github.docker-java:docker-java-core:3.3.4")
@@ -60,6 +61,42 @@ dependencies {
   testImplementation("org.mockito:mockito-core:5.11.0")
   testImplementation("org.testfx:testfx-junit5:4.0.18")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+// Downloads xterm.js 5.3.0 into resources if not already present.
+// Run manually: ./gradlew downloadXterm
+// Runs automatically before processResources.
+tasks.register("downloadXterm") {
+  description = "Downloads xterm.js 5.3.0 into src/main/resources/terminal/"
+  val dir = layout.projectDirectory.dir("src/main/resources/terminal")
+  val jsFile = dir.file("xterm.js")
+  val cssFile = dir.file("xterm.css")
+  outputs.files(jsFile, cssFile)
+  doLast {
+    dir.asFile.mkdirs()
+    if (!jsFile.asFile.exists()) {
+      println("Downloading xterm.js 5.3.0...")
+      ant.withGroovyBuilder {
+        "get"(
+          "src" to "https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js",
+          "dest" to jsFile.asFile
+        )
+      }
+    }
+    if (!cssFile.asFile.exists()) {
+      println("Downloading xterm.css 5.3.0...")
+      ant.withGroovyBuilder {
+        "get"(
+          "src" to "https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css",
+          "dest" to cssFile.asFile
+        )
+      }
+    }
+  }
+}
+
+tasks.named("processResources") {
+  dependsOn("downloadXterm")
 }
 
 spotless {
