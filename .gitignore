@@ -1,0 +1,189 @@
+# =============================================================================
+# Dispatch — .gitignore
+# Java 21 + JavaFX + Gradle + IntelliJ IDEA + VS Code + macOS + Linux + Windows
+# =============================================================================
+
+
+# =============================================================================
+# SECRETS & SENSITIVE DATA — never commit these
+# =============================================================================
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+*.cer
+.env
+.env.*
+secrets/
+**/secrets/
+dispatch.db
+*.db-shm
+*.db-wal
+
+
+# =============================================================================
+# APPLICATION DATA — user-specific runtime files
+# =============================================================================
+~/.dispatch/
+.dispatch/
+
+
+# =============================================================================
+# JAVA
+# =============================================================================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+
+# =============================================================================
+# GRADLE
+# =============================================================================
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Gradle wrapper (keep the jar, ignore local cache)
+gradle/wrapper/gradle-wrapper.properties
+
+
+# =============================================================================
+# INTELLIJ IDEA
+# =============================================================================
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# IntelliJ shelf & workspace (machine-specific)
+.idea/shelf/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/caches/
+
+# Keep these IntelliJ files if present (useful for teams, optional for solo)
+# .idea/codeStyles/
+# .idea/inspectionProfiles/
+
+
+# =============================================================================
+# VS CODE
+# =============================================================================
+.vscode/
+*.code-workspace
+
+# Keep launch configs if you want to share debug configs (optional)
+# !.vscode/launch.json
+
+
+# =============================================================================
+# MACOS
+# =============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+
+# =============================================================================
+# LINUX
+# =============================================================================
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+
+# =============================================================================
+# WINDOWS
+# =============================================================================
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+
+# =============================================================================
+# LOGS
+# =============================================================================
+logs/
+*.log
+*.log.*
+log/
+
+
+# =============================================================================
+# RUNTIME & TEMP FILES
+# =============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+
+
+# =============================================================================
+# TEST OUTPUT
+# =============================================================================
+test-results/
+test-output/
+.testfx/
+
+
+# =============================================================================
+# JAVAFX / JPACKAGE OUTPUT
+# =============================================================================
+# jpackage produces platform installers — don't commit these
+dist/
+installer/
+*.dmg
+*.exe
+*.msi
+*.deb
+*.rpm
+*.pkg
