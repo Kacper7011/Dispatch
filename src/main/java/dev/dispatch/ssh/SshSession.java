@@ -178,6 +178,20 @@ public class SshSession {
     }
   }
 
+  /**
+   * Opens a raw JSch channel of the given type. Package-private — used by TunnelService.
+   *
+   * @throws SshException if the session is not connected or JSch fails to open the channel
+   */
+  com.jcraft.jsch.Channel openJschChannel(String type) {
+    requireConnected();
+    try {
+      return jschSession.openChannel(type);
+    } catch (com.jcraft.jsch.JSchException e) {
+      throw new SshException("Failed to open JSch channel '" + type + "' on " + host.getName(), e);
+    }
+  }
+
   /** Registers a callback invoked when the session drops unexpectedly (LOST state). */
   public void setOnLost(Consumer<SshSession> callback) {
     this.onLostCallback = callback;
