@@ -37,9 +37,7 @@ public class HostFormController {
   private Stage stage;
   private Host editingHost;
 
-  /**
-   * Prepares the form for creating a new host (editingHost == null) or editing an existing one.
-   */
+  /** Prepares the form for creating a new host (editingHost == null) or editing an existing one. */
   public void init(HostRepository hostRepository, Stage stage, Host editingHost) {
     this.hostRepository = hostRepository;
     this.stage = stage;
@@ -64,8 +62,7 @@ public class HostFormController {
   private void onBrowseKey() {
     FileChooser chooser = new FileChooser();
     chooser.setTitle("Select SSH private key");
-    chooser.setInitialDirectory(
-        new File(System.getProperty("user.home") + "/.ssh"));
+    chooser.setInitialDirectory(new File(System.getProperty("user.home") + "/.ssh"));
     File file = chooser.showOpenDialog(stage);
     if (file != null) {
       keyPathField.setText(file.getAbsolutePath());

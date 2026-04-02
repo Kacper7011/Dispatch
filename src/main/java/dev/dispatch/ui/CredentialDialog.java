@@ -12,8 +12,8 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.layout.VBox;
 
 /**
- * Utility dialogs for collecting SSH credentials before connecting.
- * Shows a password dialog for PASSWORD auth and a passphrase dialog for KEY auth.
+ * Utility dialogs for collecting SSH credentials before connecting. Shows a password dialog for
+ * PASSWORD auth and a passphrase dialog for KEY auth.
  */
 public final class CredentialDialog {
 
@@ -33,9 +33,10 @@ public final class CredentialDialog {
   }
 
   private static Optional<SshCredentials> promptForPassword(Host host) {
-    Dialog<SshCredentials> dialog = buildDialog(
-        "Connect — " + host.getName(),
-        "Password for " + host.getUsername() + "@" + host.getHostname());
+    Dialog<SshCredentials> dialog =
+        buildDialog(
+            "Connect — " + host.getName(),
+            "Password for " + host.getUsername() + "@" + host.getHostname());
 
     PasswordField field = new PasswordField();
     field.setPromptText("Password");
@@ -48,10 +49,12 @@ public final class CredentialDialog {
   }
 
   private static Optional<SshCredentials> promptForKeyPassphrase(Host host) {
-    Dialog<SshCredentials> dialog = buildDialog(
-        "Connect — " + host.getName(),
-        "Passphrase for key: " + host.getKeyPath()
-            + "\n(leave blank if key has no passphrase)");
+    Dialog<SshCredentials> dialog =
+        buildDialog(
+            "Connect — " + host.getName(),
+            "Passphrase for key: "
+                + host.getKeyPath()
+                + "\n(leave blank if key has no passphrase)");
 
     PasswordField field = new PasswordField();
     field.setPromptText("Passphrase (optional)");
@@ -74,8 +77,10 @@ public final class CredentialDialog {
     dialog.setTitle(title);
     dialog.setHeaderText(header);
     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-    dialog.getDialogPane().getStylesheets().add(
-        CredentialDialog.class.getResource("/css/dispatch-dark.css").toExternalForm());
+    dialog
+        .getDialogPane()
+        .getStylesheets()
+        .add(CredentialDialog.class.getResource("/css/dispatch-dark.css").toExternalForm());
     return dialog;
   }
 

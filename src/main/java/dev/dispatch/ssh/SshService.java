@@ -16,7 +16,9 @@ public class SshService implements AutoCloseable {
 
   private final Map<Long, SshSession> sessions = new ConcurrentHashMap<>();
 
-  /** Creates the service. JSch nie potrzebuje współdzielonego klienta — każda sesja tworzy własny. */
+  /**
+   * Creates the service. JSch nie potrzebuje współdzielonego klienta — każda sesja tworzy własny.
+   */
   public SshService() {
     log.info("SshService started");
   }

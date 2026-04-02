@@ -2,16 +2,16 @@ package dev.dispatch.ui.host;
 
 import dev.dispatch.core.model.Host;
 import dev.dispatch.ssh.SessionState;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 /**
- * Custom list cell rendering a host as: [status dot] [name] / [hostname:port].
- * Built programmatically — no FXML needed for a cell this simple.
+ * Custom list cell rendering a host as: [status dot] [name] / [hostname:port]. Built
+ * programmatically — no FXML needed for a cell this simple.
  */
 public class HostCell extends ListCell<Host> {
 

@@ -1,11 +1,8 @@
 package dev.dispatch.ssh;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import dev.dispatch.core.model.AuthType;
-import dev.dispatch.core.model.Host;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

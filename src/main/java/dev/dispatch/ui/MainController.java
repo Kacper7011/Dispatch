@@ -53,8 +53,7 @@ public class MainController {
     if (host == null) {
       return;
     }
-    CredentialDialog.prompt(host)
-        .ifPresent(credentials -> connectAsync(host, credentials));
+    CredentialDialog.prompt(host).ifPresent(credentials -> connectAsync(host, credentials));
   }
 
   private void connectAsync(Host host, SshCredentials credentials) {
@@ -82,11 +81,12 @@ public class MainController {
     TerminalController terminal = new TerminalController(session);
     tab.setText(session.getHost().getName());
     tab.setContent(terminal.createNode());
-    tab.setOnClosed(e -> {
-      terminal.dispose();
-      sshService.disconnect(session.getHost().getId());
-      updateEmptyState();
-    });
+    tab.setOnClosed(
+        e -> {
+          terminal.dispose();
+          sshService.disconnect(session.getHost().getId());
+          updateEmptyState();
+        });
     log.info("Terminal tab opened for {}", session.getHost().getName());
   }
 

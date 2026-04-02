@@ -19,12 +19,7 @@ public class Host {
 
   /** Convenience constructor for creating a new (unsaved) host. */
   public Host(
-      String name,
-      String hostname,
-      int port,
-      String username,
-      AuthType authType,
-      String keyPath) {
+      String name, String hostname, int port, String username, AuthType authType, String keyPath) {
     this.name = name;
     this.hostname = hostname;
     this.port = port;

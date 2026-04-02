@@ -131,7 +131,8 @@ public class HostRepository {
   }
 
   private void bindInsertParams(PreparedStatement stmt, Host host) throws SQLException {
-    LocalDateTime createdAt = host.getCreatedAt() != null ? host.getCreatedAt() : LocalDateTime.now();
+    LocalDateTime createdAt =
+        host.getCreatedAt() != null ? host.getCreatedAt() : LocalDateTime.now();
     stmt.setString(1, host.getName());
     stmt.setString(2, host.getHostname());
     stmt.setInt(3, host.getPort());

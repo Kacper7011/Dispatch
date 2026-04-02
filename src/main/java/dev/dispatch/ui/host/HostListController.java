@@ -21,7 +21,9 @@ import javafx.stage.Window;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Manages the sidebar host list: load, add, edit, delete. Connect is wired up by MainController. */
+/**
+ * Manages the sidebar host list: load, add, edit, delete. Connect is wired up by MainController.
+ */
 public class HostListController {
 
   private static final Logger log = LoggerFactory.getLogger(HostListController.class);
@@ -90,7 +92,8 @@ public class HostListController {
     confirm.setTitle("Delete host");
     confirm.setHeaderText("Delete \"" + selected.getName() + "\"?");
     confirm.setContentText("This cannot be undone.");
-    confirm.showAndWait()
+    confirm
+        .showAndWait()
         .filter(btn -> btn == ButtonType.OK)
         .ifPresent(btn -> deleteHost(selected));
   }
@@ -146,8 +149,7 @@ public class HostListController {
       formStage.initOwner(getOwnerWindow());
 
       Scene scene = new Scene(loader.load());
-      scene.getStylesheets().add(
-          getClass().getResource("/css/dispatch-dark.css").toExternalForm());
+      scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
       formStage.setScene(scene);
       formStage.setResizable(false);
 

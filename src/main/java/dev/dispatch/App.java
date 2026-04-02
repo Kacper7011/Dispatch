@@ -30,11 +30,9 @@ public class App extends Application {
     dbManager = new DatabaseManager();
     sshService = new SshService();
 
-    FXMLLoader loader =
-        new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
+    FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene = new Scene(loader.load(), 1280, 800);
-    scene.getStylesheets().add(
-        getClass().getResource("/css/dispatch-dark.css").toExternalForm());
+    scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
     MainController ctrl = loader.getController();
     ctrl.init(dbManager, sshService);
@@ -67,8 +65,9 @@ public class App extends Application {
     Font.loadFont(stream, 13);
     log.debug("Font loaded: {}", resourcePath);
   }
-
+  
   public static void main(String[] args) {
     launch(args);
   }
 }
+

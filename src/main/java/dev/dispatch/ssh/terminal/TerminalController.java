@@ -1,9 +1,10 @@
 package dev.dispatch.ssh.terminal;
 
-import dev.dispatch.ssh.SshException;
+import com.jcraft.jsch.ChannelShell;
 import dev.dispatch.ssh.SshSession;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -11,9 +12,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import com.jcraft.jsch.ChannelShell;
-import java.io.InputStream;
-import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,9 +57,9 @@ public class TerminalController {
   }
 
   /**
-   * Intercepts Ctrl+key combinations at the JavaFX level before WebView can absorb them
-   * (e.g. Ctrl+L = "focus address bar" in browser context) and forwards the correct VT100
-   * control sequence directly to the SSH channel.
+   * Intercepts Ctrl+key combinations at the JavaFX level before WebView can absorb them (e.g.
+   * Ctrl+L = "focus address bar" in browser context) and forwards the correct VT100 control
+   * sequence directly to the SSH channel.
    */
   private void installCtrlKeyFilter(WebView view) {
     view.addEventFilter(
@@ -98,7 +96,7 @@ public class TerminalController {
       case F -> "\u0006"; // ACK  — forward one char (readline)
       case G -> "\u0007"; // BEL  — cancel / bell
       case H -> "\u0008"; // BS   — backspace
-      case J -> "\n";     // LF   — newline
+      case J -> "\n"; // LF   — newline
       case K -> "\u000B"; // VT   — kill to end of line (readline)
       case N -> "\u000E"; // SO   — next history entry (readline)
       case P -> "\u0010"; // DLE  — previous history entry (readline)
@@ -112,8 +110,8 @@ public class TerminalController {
       case X -> "\u0018"; // CAN  — cancel
       case Y -> "\u0019"; // EM   — yank (readline)
       case Z -> "\u001A"; // SUB  — SIGTSTP (suspend)
-      case OPEN_BRACKET  -> "\u001B"; // ESC
-      case BACK_SLASH    -> "\u001C"; // FS — SIGQUIT
+      case OPEN_BRACKET -> "\u001B"; // ESC
+      case BACK_SLASH -> "\u001C"; // FS — SIGQUIT
       case CLOSE_BRACKET -> "\u001D"; // GS
       default -> null;
     };
@@ -156,12 +154,15 @@ public class TerminalController {
                   log.debug("Terminal HTML loaded for {}", session.getHost().getName());
                   openShellAsync(engine);
                 } else if (state == javafx.concurrent.Worker.State.FAILED) {
-                  log.error(
-                      "Terminal HTML failed to load for {}", session.getHost().getName());
+                  log.error("Terminal HTML failed to load for {}", session.getHost().getName());
                 }
               });
     } catch (IOException e) {
-      log.error("Failed to build terminal HTML for {}: {}", session.getHost().getName(), e.getMessage(), e);
+      log.error(
+          "Failed to build terminal HTML for {}: {}",
+          session.getHost().getName(),
+          e.getMessage(),
+          e);
     }
   }
 
@@ -181,7 +182,10 @@ public class TerminalController {
               } catch (Exception e) {
                 // Catch all — uncaught exceptions on virtual threads are silently swallowed
                 log.error(
-                    "Failed to open shell on {}: {}", session.getHost().getName(), e.getMessage(), e);
+                    "Failed to open shell on {}: {}",
+                    session.getHost().getName(),
+                    e.getMessage(),
+                    e);
                 Platform.runLater(
                     () ->
                         engine.executeScript(
@@ -196,16 +200,14 @@ public class TerminalController {
     String template = readResource("/terminal/terminal.html");
     String xtermJs = readResource("/terminal/xterm.js");
     String xtermCss = readResource("/terminal/xterm.css");
-    return template
-        .replace("{{XTERM_JS}}", xtermJs)
-        .replace("{{XTERM_CSS}}", xtermCss);
+    return template.replace("{{XTERM_JS}}", xtermJs).replace("{{XTERM_CSS}}", xtermCss);
   }
 
   private String readResource(String path) throws IOException {
     try (InputStream in = getClass().getResourceAsStream(path)) {
       if (in == null) {
-        throw new IOException("Resource not found: " + path
-            + " — run ./gradlew downloadXterm first");
+        throw new IOException(
+            "Resource not found: " + path + " — run ./gradlew downloadXterm first");
       }
       return new String(in.readAllBytes(), StandardCharsets.UTF_8);
     }

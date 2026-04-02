@@ -45,8 +45,8 @@ public class SshTerminalBridge {
   }
 
   /**
-   * Registers the Java handler on the JS window and starts the SSH-to-terminal output pump. Must
-   * be called after the WebEngine has finished loading (state == SUCCEEDED). May be called from any
+   * Registers the Java handler on the JS window and starts the SSH-to-terminal output pump. Must be
+   * called after the WebEngine has finished loading (state == SUCCEEDED). May be called from any
    * thread.
    */
   public void start() {
