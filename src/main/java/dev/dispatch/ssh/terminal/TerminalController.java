@@ -11,7 +11,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import org.apache.sshd.client.channel.ChannelShell;
+import com.jcraft.jsch.ChannelShell;
+import java.io.InputStream;
+import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -169,8 +171,11 @@ public class TerminalController {
         .start(
             () -> {
               try {
-                ChannelShell channel = session.openShell(INITIAL_COLS, INITIAL_ROWS);
-                bridge = new SshTerminalBridge(engine, channel);
+                Object[] shell = session.openShell(INITIAL_COLS, INITIAL_ROWS);
+                ChannelShell channel = (ChannelShell) shell[0];
+                InputStream stdout = (InputStream) shell[1];
+                OutputStream stdin = (OutputStream) shell[2];
+                bridge = new SshTerminalBridge(engine, channel, stdout, stdin);
                 bridge.start();
                 log.info("Terminal ready for {}", session.getHost().getName());
               } catch (Exception e) {

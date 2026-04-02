@@ -31,9 +31,8 @@ dependencies {
   // UI Theme — AtlantaFX dark base
   implementation("io.github.mkpaz:atlantafx-base:2.0.1")
 
-  // SSH — Apache MINA SSHD
-  implementation("org.apache.sshd:sshd-core:2.12.1")
-  implementation("org.apache.sshd:sshd-sftp:2.12.1")
+  // SSH — JSch (mwiede fork, aktywnie utrzymywany, pełne wsparcie Ed25519)
+  implementation("com.github.mwiede:jsch:0.2.19")
 
   // BouncyCastle — required by MINA SSHD for ed25519, ecdsa, and modern key types
   implementation("org.bouncycastle:bcpkix-jdk18on:1.77")

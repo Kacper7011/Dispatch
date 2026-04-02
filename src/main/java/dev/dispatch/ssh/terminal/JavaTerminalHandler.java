@@ -1,9 +1,9 @@
 package dev.dispatch.ssh.terminal;
 
+import com.jcraft.jsch.ChannelShell;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import org.apache.sshd.client.channel.ChannelShell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,9 +21,11 @@ public class JavaTerminalHandler {
   private static final Logger log = LoggerFactory.getLogger(JavaTerminalHandler.class);
 
   private final ChannelShell channel;
+  private final OutputStream stdin;
 
-  public JavaTerminalHandler(ChannelShell channel) {
+  public JavaTerminalHandler(ChannelShell channel, OutputStream stdin) {
     this.channel = channel;
+    this.stdin = stdin;
   }
 
   /** Called by xterm.js for every keystroke and paste event. */
@@ -32,10 +34,8 @@ public class JavaTerminalHandler {
         .start(
             () -> {
               try {
-                // getInvertedIn() = OutputStream → data flows client → server (stdin)
-                OutputStream out = channel.getInvertedIn();
-                out.write(data.getBytes(StandardCharsets.UTF_8));
-                out.flush();
+                stdin.write(data.getBytes(StandardCharsets.UTF_8));
+                stdin.flush();
               } catch (IOException e) {
                 log.warn("Failed to send input to SSH channel: {}", e.getMessage());
               }
@@ -47,13 +47,9 @@ public class JavaTerminalHandler {
     Thread.ofVirtual()
         .start(
             () -> {
-              try {
-                // pixel dimensions set to 0 — only character dimensions matter
-                channel.sendWindowChange(cols, rows, 0, 0);
-                log.debug("Terminal resized to {}x{}", cols, rows);
-              } catch (IOException e) {
-                log.warn("Failed to send window-change to SSH: {}", e.getMessage());
-              }
+              // pixel dimensions set to 0 — only character dimensions matter
+              channel.setPtySize(cols, rows, 0, 0);
+              log.debug("Terminal resized to {}x{}", cols, rows);
             });
   }
 }

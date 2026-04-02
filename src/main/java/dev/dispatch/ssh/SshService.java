@@ -6,77 +6,37 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.sshd.client.SshClient;
-import org.apache.sshd.client.keyverifier.AcceptAllServerKeyVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Manages the lifecycle of SSH sessions across all homelab hosts.
- *
- * <p>Holds a single shared {@link SshClient} (Apache MINA) and a map of active
- * {@link SshSession}s keyed by host id. All blocking methods (connect, exec) must be called from
- * virtual threads — never from the FX Application Thread.
- *
- * <p>Usage:
- *
- * <pre>{@code
- * SshService ssh = new SshService();
- * Thread.ofVirtual().start(() -> {
- *   SshSession session = ssh.connect(host, SshCredentials.password("secret"));
- *   ExecResult result = session.exec("docker info");
- * });
- * }</pre>
- */
+/** Manages the lifecycle of SSH sessions across all homelab hosts. */
 public class SshService implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(SshService.class);
 
-  private final SshClient client;
   private final Map<Long, SshSession> sessions = new ConcurrentHashMap<>();
 
-  /** Creates the service and starts the underlying MINA SSH client. */
+  /** Creates the service. JSch nie potrzebuje współdzielonego klienta — każda sesja tworzy własny. */
   public SshService() {
-    registerBouncyCastle();
-    this.client = SshClient.setUpDefaultClient();
-    // Accept all host keys — homelab app, no TOFU verification needed.
-    // In a production app, use KnownHostsServerKeyVerifier instead.
-    this.client.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
-    this.client.start();
     log.info("SshService started");
-  }
-
-  private void registerBouncyCastle() {
-    // Required for ed25519, ecdsa, and other modern key types not supported by the JDK alone.
-    if (java.security.Security.getProvider("BC") == null) {
-      java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-      log.debug("BouncyCastle security provider registered");
-    }
   }
 
   /**
    * Connects to a host and authenticates. Blocks until connected or throws.
    *
    * <p>If a session already exists for the host, it is disconnected first.
-   *
-   * @param host        the host profile to connect to
-   * @param credentials the authentication credentials
-   * @return the connected {@link SshSession}
-   * @throws SshException if connection or authentication fails
    */
   public SshSession connect(Host host, SshCredentials credentials) {
     disconnectIfPresent(host.getId());
     log.debug("Initiating connection to {}", host.getName());
     SshSession session = new SshSession(host);
-    session.setOnLost(lost -> onSessionLost(lost));
-    session.connect(client, credentials);
+    session.setOnLost(this::onSessionLost);
+    session.connect(credentials);
     sessions.put(host.getId(), session);
     return session;
   }
 
-  /**
-   * Disconnects the active session for the given host id. No-op if no session exists.
-   */
+  /** Disconnects the active session for the given host id. No-op if no session exists. */
   public void disconnect(long hostId) {
     disconnectIfPresent(hostId);
   }
@@ -91,15 +51,12 @@ public class SshService implements AutoCloseable {
     return Collections.unmodifiableCollection(sessions.values());
   }
 
-  /**
-   * Disconnects all sessions and stops the MINA SSH client. Call from {@code App.stop()}.
-   */
+  /** Disconnects all sessions. Call from {@code App.stop()}. */
   @Override
   public void close() {
     log.info("Shutting down SshService ({} active sessions)", sessions.size());
     sessions.values().forEach(SshSession::disconnect);
     sessions.clear();
-    client.stop();
     log.info("SshService stopped");
   }
 
@@ -116,9 +73,6 @@ public class SshService implements AutoCloseable {
   }
 
   private void onSessionLost(SshSession session) {
-    // Keep the session in the map so the UI can display the LOST state and offer reconnect.
-    // The UI registers its own onLost callback via session.setOnLost() after connect() returns.
-    log.warn(
-        "Session LOST for host {} — kept in map for reconnect", session.getHost().getName());
+    log.warn("Session LOST for host {} — kept in map for reconnect", session.getHost().getName());
   }
 }

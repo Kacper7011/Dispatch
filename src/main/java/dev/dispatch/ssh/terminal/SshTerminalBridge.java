@@ -1,27 +1,27 @@
 package dev.dispatch.ssh.terminal;
 
+import com.jcraft.jsch.ChannelShell;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Base64;
-import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.web.WebEngine;
 import netscape.javascript.JSObject;
-import org.apache.sshd.client.channel.ChannelShell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Bridges an open SSH {@link ChannelShell} to an xterm.js terminal running inside a
- * {@link WebEngine}.
+ * Bridges an open SSH {@link ChannelShell} to an xterm.js terminal running inside a {@link
+ * WebEngine}.
  *
  * <ul>
  *   <li>SSH stdout → base64-encoded → {@code term.write()} via {@code WebEngine.executeScript()}
  *   <li>JS input events → {@link JavaTerminalHandler#sendInput(String)} → SSH stdin
  * </ul>
  *
- * <p>The bridge starts reading SSH output as soon as {@link #start()} is called. All
- * {@code executeScript} calls are dispatched to the FX thread via {@link Platform#runLater}.
+ * <p>The bridge starts reading SSH output as soon as {@link #start()} is called. All {@code
+ * executeScript} calls are dispatched to the FX thread via {@link Platform#runLater}.
  */
 public class SshTerminalBridge {
 
@@ -29,24 +29,27 @@ public class SshTerminalBridge {
 
   private final WebEngine engine;
   private final ChannelShell channel;
+  private final InputStream stdout;
+  private final OutputStream stdin;
   private volatile boolean running = true;
   // Strong reference required — JSObject.setMember() holds only a weak ref,
   // so without this field the GC would collect the handler and break JS→Java calls.
   private JavaTerminalHandler terminalHandler;
 
-  public SshTerminalBridge(WebEngine engine, ChannelShell channel) {
+  public SshTerminalBridge(
+      WebEngine engine, ChannelShell channel, InputStream stdout, OutputStream stdin) {
     this.engine = engine;
     this.channel = channel;
+    this.stdout = stdout;
+    this.stdin = stdin;
   }
 
   /**
-   * Registers the Java handler on the JS window and starts the SSH-to-terminal output pump.
-   * Must be called after the WebEngine has finished loading (state == SUCCEEDED).
-   * May be called from any thread.
+   * Registers the Java handler on the JS window and starts the SSH-to-terminal output pump. Must
+   * be called after the WebEngine has finished loading (state == SUCCEEDED). May be called from any
+   * thread.
    */
   public void start() {
-    // Page is guaranteed loaded here — we're called from the SUCCEEDED listener.
-    // Always dispatch to FX thread; never access WebEngine from a non-FX thread.
     Platform.runLater(this::registerJsHandler);
     Thread.ofVirtual().name("ssh-output-pump").start(this::pumpSshOutput);
   }
@@ -61,12 +64,8 @@ public class SshTerminalBridge {
   /** Stops reading and closes the shell channel. */
   public void dispose() {
     running = false;
-    try {
-      channel.close(false).await(3, TimeUnit.SECONDS);
-      log.info("Shell channel closed");
-    } catch (IOException e) {
-      log.warn("Error closing shell channel: {}", e.getMessage());
-    }
+    channel.disconnect();
+    log.info("Shell channel closed");
   }
 
   // -------------------------------------------------------------------------
@@ -76,7 +75,7 @@ public class SshTerminalBridge {
   private void registerJsHandler() {
     Platform.runLater(
         () -> {
-          terminalHandler = new JavaTerminalHandler(channel);
+          terminalHandler = new JavaTerminalHandler(channel, stdin);
           JSObject window = (JSObject) engine.executeScript("window");
           window.setMember("javaTerminal", terminalHandler);
           log.debug("JavaTerminalHandler registered on JS window");
@@ -85,10 +84,9 @@ public class SshTerminalBridge {
 
   private void pumpSshOutput() {
     byte[] buf = new byte[4096];
-    // getInvertedOut() = InputStream ← data flows server → client (stdout)
-    try (InputStream in = channel.getInvertedOut()) {
+    try {
       int read;
-      while (running && (read = in.read(buf)) != -1) {
+      while (running && (read = stdout.read(buf)) != -1) {
         // Base64-encode to avoid any JS string escaping issues with binary data
         String b64 = Base64.getEncoder().encodeToString(java.util.Arrays.copyOf(buf, read));
         Platform.runLater(
@@ -99,8 +97,7 @@ public class SshTerminalBridge {
     } catch (IOException e) {
       if (running) {
         log.warn("SSH output stream ended: {}", e.getMessage());
-        Platform.runLater(
-            () -> engine.executeScript("term.writeln('\\r\\n[Connection closed]')"));
+        Platform.runLater(() -> engine.executeScript("term.writeln('\\r\\n[Connection closed]')"));
       }
     }
     log.info("SSH output pump stopped");
