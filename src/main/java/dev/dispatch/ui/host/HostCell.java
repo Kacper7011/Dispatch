@@ -16,9 +16,9 @@ import javafx.scene.shape.Circle;
  */
 public class HostCell extends ListCell<Host> {
 
-  private static final Color COLOR_DISCONNECTED = Color.web("#565575");
-  private static final Color COLOR_CONNECTED = Color.web("#95ffa4");
-  private static final Color COLOR_LOST = Color.web("#ff8080");
+  private static final Color COLOR_DISCONNECTED = Color.web("#505050");
+  private static final Color COLOR_CONNECTED = Color.web("#85c491");
+  private static final Color COLOR_LOST = Color.web("#d47e7e");
 
   private final Function<Long, SessionState> stateProvider;
   private final HBox container;
@@ -58,7 +58,18 @@ public class HostCell extends ListCell<Host> {
     nameLabel.setText(host.getName());
     addressLabel.setText(host.getHostname() + ":" + host.getPort());
     statusDot.setFill(stateToColor(stateProvider.apply(host.getId())));
+    applySelectionStyle(isSelected());
     setGraphic(container);
+  }
+
+  @Override
+  public void updateSelected(boolean selected) {
+    super.updateSelected(selected);
+    applySelectionStyle(selected);
+  }
+
+  private void applySelectionStyle(boolean selected) {
+    nameLabel.setStyle(selected ? "-fx-text-fill: #7eb8ba;" : null);
   }
 
   private Color stateToColor(SessionState state) {

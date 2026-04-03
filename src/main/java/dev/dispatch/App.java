@@ -12,6 +12,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,15 +34,20 @@ public class App extends Application {
     sshService = new SshService();
     tunnelService = new TunnelService();
 
+    // Remove OS title bar — the app draws its own
+    stage.initStyle(StageStyle.UNDECORATED);
+
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene = new Scene(loader.load(), 1280, 800);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
+    // Scene must be attached before init so resize helpers can reference it
+    stage.setScene(scene);
+
     MainController ctrl = loader.getController();
-    ctrl.init(dbManager, sshService, tunnelService);
+    ctrl.init(dbManager, sshService, tunnelService, stage);
 
     stage.setTitle("Dispatch");
-    stage.setScene(scene);
     stage.show();
     log.info("Dispatch started");
   }

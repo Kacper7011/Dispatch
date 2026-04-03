@@ -3,20 +3,18 @@ package dev.dispatch.ui.docker;
 import dev.dispatch.docker.DockerException;
 import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
+import dev.dispatch.docker.model.ContainerStatus;
 import java.util.List;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.ListView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Controller for the Docker panel — shows all containers on the remote host and provides Start /
- * Stop / Remove actions per row.
+ * Controller for the Docker panel — shows all containers as cards and provides per-container
+ * actions (start / stop / remove / logs).
  *
  * <p>All Docker operations run on virtual threads; UI updates are posted via {@code
  * Platform.runLater()}.
@@ -25,11 +23,10 @@ public class DockerPanelController {
 
   private static final Logger log = LoggerFactory.getLogger(DockerPanelController.class);
 
-  @FXML private TableView<ContainerInfo> containerTable;
-  @FXML private TableColumn<ContainerInfo, String> colName;
-  @FXML private TableColumn<ContainerInfo, String> colImage;
-  @FXML private TableColumn<ContainerInfo, ContainerInfo> colStatus;
-  @FXML private TableColumn<ContainerInfo, ContainerInfo> colActions;
+  @FXML private ListView<ContainerInfo> containerList;
+  @FXML private Label statRunningCount;
+  @FXML private Label statStoppedCount;
+  @FXML private Label statImagesCount;
   @FXML private Label statusLabel;
 
   private DockerService dockerService;
@@ -37,8 +34,7 @@ public class DockerPanelController {
   /** Injects the connected {@link DockerService} and loads the initial container list. */
   public void init(DockerService dockerService) {
     this.dockerService = dockerService;
-    containerTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-    setupColumns();
+    containerList.setCellFactory(lv -> new ContainerCard(this));
     refresh();
   }
 
@@ -52,7 +48,7 @@ public class DockerPanelController {
   }
 
   // -------------------------------------------------------------------------
-  // Package-private actions — called by ContainerRowController
+  // Package-private actions — called by ContainerCard
   // -------------------------------------------------------------------------
 
   void startContainer(ContainerInfo c) {
@@ -67,23 +63,15 @@ public class DockerPanelController {
     runContainerOp(() -> dockerService.removeContainer(c.getId()), "Removing " + c.getName(), c);
   }
 
+  /** Stub — log streaming will be wired in a dedicated terminal module. */
+  void streamLogs(ContainerInfo c) {
+    log.info("Log streaming requested for {} — not yet implemented", c.getName());
+    setStatus("Logs: " + c.getName() + " (streaming not yet available)");
+  }
+
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
-
-  private void setupColumns() {
-    colName.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
-
-    colImage.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getImage()));
-
-    // Status and Actions columns receive the full ContainerInfo so their cells
-    // can access both the status enum (for badge colour) and the id (for actions).
-    colStatus.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue()));
-    colStatus.setCellFactory(col -> new ContainerStatusCell());
-
-    colActions.setCellValueFactory(data -> new SimpleObjectProperty<>(data.getValue()));
-    colActions.setCellFactory(col -> new ContainerRowController(this));
-  }
 
   private void refresh() {
     setStatus("Loading…");
@@ -93,9 +81,11 @@ public class DockerPanelController {
             () -> {
               try {
                 List<ContainerInfo> containers = dockerService.listContainers();
+                int imageCount = fetchImageCount();
                 Platform.runLater(
                     () -> {
-                      containerTable.getItems().setAll(containers);
+                      containerList.getItems().setAll(containers);
+                      updateStats(containers, imageCount);
                       setStatus(containers.size() + " container(s)");
                       log.debug("Container list refreshed: {} items", containers.size());
                     });
@@ -104,6 +94,25 @@ public class DockerPanelController {
                 Platform.runLater(() -> setStatus("Error: " + e.getMessage()));
               }
             });
+  }
+
+  private int fetchImageCount() {
+    try {
+      return dockerService.listImages().size();
+    } catch (DockerException e) {
+      log.warn("Could not fetch image count: {}", e.getMessage());
+      return -1;
+    }
+  }
+
+  private void updateStats(List<ContainerInfo> containers, int imageCount) {
+    long running =
+        containers.stream().filter(c -> c.getStatus() == ContainerStatus.RUNNING).count();
+    long stopped =
+        containers.stream().filter(c -> c.getStatus() != ContainerStatus.RUNNING).count();
+    statRunningCount.setText(String.valueOf(running));
+    statStoppedCount.setText(String.valueOf(stopped));
+    statImagesCount.setText(imageCount >= 0 ? String.valueOf(imageCount) : "—");
   }
 
   private void runContainerOp(Runnable op, String description, ContainerInfo container) {

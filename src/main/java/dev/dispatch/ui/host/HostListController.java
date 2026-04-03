@@ -11,13 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.input.MouseButton;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -25,35 +31,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Manages the sidebar host list: load, add, edit, delete. Connect is wired up by MainController.
+ * Manages the sidebar host list: load, add, edit, delete.
+ *
+ * <p>Connect is triggered by double-clicking a host row. Edit and Delete are available via the
+ * right-click context menu. The "+" Add Host button at the bottom opens the host form.
  */
 public class HostListController {
 
   private static final Logger log = LoggerFactory.getLogger(HostListController.class);
 
   @FXML private ListView<Host> hostListView;
-  @FXML private Button connectButton;
-  @FXML private Button editButton;
-  @FXML private Button deleteButton;
+  @FXML private Label hostCountLabel;
 
   private HostRepository hostRepository;
-  private SshService sshService;
+  private EventHandler<ActionEvent> connectHandler;
   private final ObservableList<Host> hosts = FXCollections.observableArrayList();
   private final Map<Long, SessionState> sessionStates = new ConcurrentHashMap<>();
 
   /** Called by MainController after FXML injection. */
   public void init(HostRepository hostRepository, SshService sshService) {
     this.hostRepository = hostRepository;
-    this.sshService = sshService;
     hostListView.setItems(hosts);
     hostListView.setCellFactory(
-        lv ->
-            new HostCell(
-                id -> sessionStates.getOrDefault(id, SessionState.DISCONNECTED)));
-    hostListView
-        .getSelectionModel()
-        .selectedItemProperty()
-        .addListener((obs, old, selected) -> onSelectionChanged(selected));
+        lv -> new HostCell(id -> sessionStates.getOrDefault(id, SessionState.DISCONNECTED)));
+    setupDoubleClickConnect();
+    setupContextMenu();
     loadHosts();
   }
 
@@ -66,9 +68,9 @@ public class HostListController {
     Platform.runLater(hostListView::refresh);
   }
 
-  /** Allows MainController to set a connect action on the Connect button. */
-  public void setOnConnectAction(javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
-    connectButton.setOnAction(handler);
+  /** Allows MainController to attach a connect action triggered by double-clicking a host. */
+  public void setOnConnectAction(EventHandler<ActionEvent> handler) {
+    this.connectHandler = handler;
   }
 
   /** Returns the currently selected host, or null. */
@@ -90,20 +92,47 @@ public class HostListController {
     openForm(null);
   }
 
-  @FXML
-  private void onEdit() {
-    Host selected = hostListView.getSelectionModel().getSelectedItem();
-    if (selected != null) {
-      openForm(selected);
+  // -------------------------------------------------------------------------
+  // Private helpers
+  // -------------------------------------------------------------------------
+
+  private void setupDoubleClickConnect() {
+    hostListView.setOnMouseClicked(
+        event -> {
+          if (event.getButton() == MouseButton.PRIMARY
+              && event.getClickCount() == 2
+              && getSelectedHost() != null) {
+            fireConnect();
+          }
+        });
+  }
+
+  private void setupContextMenu() {
+    MenuItem editItem = new MenuItem("Edit");
+    MenuItem deleteItem = new MenuItem("Delete");
+    MenuItem connectItem = new MenuItem("Connect");
+
+    connectItem.setOnAction(e -> fireConnect());
+    editItem.setOnAction(
+        e -> {
+          Host selected = getSelectedHost();
+          if (selected != null) openForm(selected);
+        });
+    deleteItem.setOnAction(e -> confirmAndDelete());
+
+    ContextMenu menu = new ContextMenu(connectItem, new SeparatorMenuItem(), editItem, deleteItem);
+    hostListView.setContextMenu(menu);
+  }
+
+  private void fireConnect() {
+    if (connectHandler != null) {
+      connectHandler.handle(new ActionEvent());
     }
   }
 
-  @FXML
-  private void onDelete() {
-    Host selected = hostListView.getSelectionModel().getSelectedItem();
-    if (selected == null) {
-      return;
-    }
+  private void confirmAndDelete() {
+    Host selected = getSelectedHost();
+    if (selected == null) return;
     Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
     confirm.setTitle("Delete host");
     confirm.setHeaderText("Delete \"" + selected.getName() + "\"?");
@@ -114,16 +143,6 @@ public class HostListController {
         .ifPresent(btn -> deleteHost(selected));
   }
 
-  @FXML
-  private void onConnect() {
-    // Wired by MainController via setOnConnectAction() — this handler is a fallback
-    log.debug("Connect clicked — no handler wired");
-  }
-
-  // -------------------------------------------------------------------------
-  // Private helpers
-  // -------------------------------------------------------------------------
-
   private void loadHosts() {
     Thread.ofVirtual()
         .start(
@@ -133,6 +152,9 @@ public class HostListController {
               Platform.runLater(
                   () -> {
                     hosts.setAll(loaded);
+                    if (hostCountLabel != null) {
+                      hostCountLabel.setText(String.valueOf(loaded.size()));
+                    }
                     log.debug("Host list refreshed: {} hosts", loaded.size());
                   });
             });
@@ -146,13 +168,6 @@ public class HostListController {
               log.info("Host deleted: {}", host.getName());
               Platform.runLater(this::loadHosts);
             });
-  }
-
-  private void onSelectionChanged(Host selected) {
-    boolean hasSelection = selected != null;
-    editButton.setDisable(!hasSelection);
-    deleteButton.setDisable(!hasSelection);
-    connectButton.setDisable(!hasSelection);
   }
 
   private void openForm(Host existingHost) {

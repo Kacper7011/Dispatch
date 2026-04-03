@@ -1,25 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 
 <BorderPane
     xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="dev.dispatch.ui.MainController">
 
-  <left>
-    <fx:include source="host-list.fxml" fx:id="hostList"/>
-  </left>
+  <!-- Custom title bar replaces the OS decoration -->
+  <top>
+    <HBox fx:id="titleBar" styleClass="title-bar" alignment="CENTER_LEFT" minHeight="38" maxHeight="38">
+      <padding><Insets top="0" right="0" bottom="0" left="16"/></padding>
 
+      <!-- Traffic-light controls (click to close / minimise / maximise) -->
+      <HBox spacing="7" alignment="CENTER">
+        <Label styleClass="traffic-light traffic-light-close"  onMouseClicked="#onClose"/>
+        <Label styleClass="traffic-light traffic-light-min"    onMouseClicked="#onMinimize"/>
+        <Label styleClass="traffic-light traffic-light-max"    onMouseClicked="#onMaximize"/>
+      </HBox>
+
+      <!-- Centre title -->
+      <Region HBox.hgrow="ALWAYS"/>
+      <Label text="DISPATCH" styleClass="title-bar-title"/>
+      <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+  </top>
+
+  <!-- Main split: sidebar | terminal  (docker panel added at runtime) -->
   <center>
-    <StackPane styleClass="main-content">
-      <TabPane fx:id="sessionTabPane" tabClosingPolicy="ALL_TABS"/>
-      <Label fx:id="emptyStateLabel"
-             text="Select a host and click Connect"
-             styleClass="empty-state-label"/>
-    </StackPane>
+    <SplitPane fx:id="mainSplitPane"
+               dividerPositions="0.17"
+               orientation="HORIZONTAL">
+      <fx:include source="host-list.fxml" fx:id="hostList"/>
+      <StackPane fx:id="terminalArea" styleClass="main-content">
+        <TabPane fx:id="sessionTabPane" tabClosingPolicy="ALL_TABS"/>
+        <Label fx:id="emptyStateLabel"
+               text="Select a host and double-click to connect"
+               styleClass="empty-state-label"/>
+      </StackPane>
+    </SplitPane>
   </center>
+
+  <bottom>
+    <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="16">
+      <padding><Insets top="0" right="16" bottom="0" left="16"/></padding>
+      <Region HBox.hgrow="ALWAYS"/>
+      <Label text="Java 21  ·  Virtual Threads" styleClass="status-item"/>
+      <Label text="v0.1.0" styleClass="status-item"/>
+    </HBox>
+  </bottom>
 
 </BorderPane>
