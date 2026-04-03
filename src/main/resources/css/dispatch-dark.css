@@ -281,3 +281,50 @@
   -fx-background-radius: 4px;
   -fx-padding: 2px 6px;
 }
+
+/* ============================================================
+   Docker panel
+   ============================================================ */
+
+.docker-panel {
+  -fx-background-color: -cd-bg;
+}
+
+.docker-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+}
+
+.docker-panel-title {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+  -fx-font-weight: bold;
+}
+
+.docker-status-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 1 0 0 0;
+}
+
+.docker-empty-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 13px;
+}
+
+.button-danger {
+  -fx-background-color: -cd-bg-alt;
+  -fx-text-fill: -cd-error;
+  -fx-border-color: -cd-error;
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-cursor: hand;
+}
+
+.button-danger:hover {
+  -fx-background-color: -cd-error;
+  -fx-text-fill: -cd-bg;
+}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="dev.dispatch.ui.docker.DockerPanelController"
+    styleClass="docker-panel">
+
+  <!-- Toolbar -->
+  <HBox styleClass="docker-toolbar" alignment="CENTER_LEFT" spacing="8">
+    <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
+    <Label text="Containers" styleClass="docker-panel-title"/>
+    <Region HBox.hgrow="ALWAYS"/>
+    <Button text="↻  Refresh" onAction="#onRefresh" styleClass="button"/>
+  </HBox>
+
+  <!-- Container table -->
+  <TableView fx:id="containerTable" VBox.vgrow="ALWAYS">
+    <columns>
+      <TableColumn fx:id="colName"    text="Name"    prefWidth="160"/>
+      <TableColumn fx:id="colImage"   text="Image"   prefWidth="240"/>
+      <TableColumn fx:id="colStatus"  text="Status"  prefWidth="160"/>
+      <TableColumn fx:id="colActions" text="Actions" prefWidth="220"/>
+    </columns>
+    <placeholder>
+      <Label text="No containers found" styleClass="docker-empty-label"/>
+    </placeholder>
+  </TableView>
+
+  <!-- Status bar -->
+  <Label fx:id="statusLabel" styleClass="docker-status-label">
+    <padding><Insets top="4" right="12" bottom="4" left="12"/></padding>
+  </Label>
+
+</VBox>

@@ -1,15 +1,26 @@
 package dev.dispatch.ui;
 
 import dev.dispatch.core.model.Host;
+import dev.dispatch.docker.DockerDetector;
+import dev.dispatch.docker.DockerException;
+import dev.dispatch.docker.DockerPresence;
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.ssh.SshCredentials;
 import dev.dispatch.ssh.SshException;
 import dev.dispatch.ssh.SshService;
 import dev.dispatch.ssh.SshSession;
+import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.ssh.terminal.TerminalController;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
+import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.host.HostListController;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
@@ -20,9 +31,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Root controller for the main window.
  *
- * <p>Owns application-level services (database, SSH) and wires them into child controllers. Handles
- * the Connect action: prompts for credentials, opens the SSH session on a virtual thread, and
- * creates a terminal tab on success.
+ * <p>Owns application-level services and wires them into child controllers. After a successful SSH
+ * connection, detects Docker in the background and adds a Docker sub-tab when found.
  */
 public class MainController {
 
@@ -33,10 +43,13 @@ public class MainController {
   @javafx.fxml.FXML private Label emptyStateLabel;
 
   private SshService sshService;
+  private TunnelService tunnelService;
+  private final Map<Long, DockerService> dockerServices = new ConcurrentHashMap<>();
 
   /** Injects services and initialises child controllers. Called by App after FXML is loaded. */
-  public void init(DatabaseManager dbManager, SshService sshService) {
+  public void init(DatabaseManager dbManager, SshService sshService, TunnelService tunnelService) {
     this.sshService = sshService;
+    this.tunnelService = tunnelService;
     HostRepository hostRepository = new HostRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
@@ -50,9 +63,7 @@ public class MainController {
 
   private void onConnectRequested() {
     Host host = hostListController.getSelectedHost();
-    if (host == null) {
-      return;
-    }
+    if (host == null) return;
     CredentialDialog.prompt(host).ifPresent(credentials -> connectAsync(host, credentials));
   }
 
@@ -69,7 +80,7 @@ public class MainController {
               try {
                 SshSession session = sshService.connect(host, credentials);
                 session.setOnLost(lost -> Platform.runLater(() -> onSessionLost(lost)));
-                Platform.runLater(() -> openTerminalTab(loadingTab, session));
+                Platform.runLater(() -> openSessionTab(loadingTab, session));
               } catch (SshException e) {
                 log.error("Connection failed to {}: {}", host.getName(), e.getMessage(), e);
                 Platform.runLater(() -> showConnectionError(loadingTab, host, e));
@@ -77,21 +88,78 @@ public class MainController {
             });
   }
 
-  private void openTerminalTab(Tab tab, SshSession session) {
+  private void openSessionTab(Tab tab, SshSession session) {
     TerminalController terminal = new TerminalController(session);
+
+    TabPane innerTabs = new TabPane();
+    innerTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+    innerTabs.getTabs().add(new Tab("Terminal", terminal.createNode()));
+
     tab.setText(session.getHost().getName());
-    tab.setContent(terminal.createNode());
+    tab.setContent(innerTabs);
     tab.setOnClosed(
         e -> {
           terminal.dispose();
+          closeDockerForSession(session);
           sshService.disconnect(session.getHost().getId());
           updateEmptyState();
         });
-    log.info("Terminal tab opened for {}", session.getHost().getName());
+
+    detectDockerAsync(session, innerTabs);
+    log.info("Session tab opened for {}", session.getHost().getName());
+  }
+
+  private void detectDockerAsync(SshSession session, TabPane innerTabs) {
+    Thread.ofVirtual()
+        .name("docker-detect-" + session.getHost().getName())
+        .start(
+            () -> {
+              DockerDetector detector = new DockerDetector();
+              DockerPresence presence = detector.detect(session);
+              if (!presence.isAvailable()) {
+                log.warn("Docker not found on {}", session.getHost().getName());
+                return;
+              }
+              String socketPath =
+                  presence.isRootless()
+                      ? detector.resolveRootlessSocketPath(session)
+                      : presence.getSocketPath();
+              connectDockerAndAddTab(session, socketPath, innerTabs);
+            });
+  }
+
+  private void connectDockerAndAddTab(SshSession session, String socketPath, TabPane innerTabs) {
+    DockerService dockerService = new DockerService(tunnelService);
+    try {
+      dockerService.connect(session, socketPath);
+      dockerServices.put(session.getHost().getId(), dockerService);
+      Platform.runLater(() -> addDockerTab(innerTabs, dockerService));
+    } catch (DockerException e) {
+      log.warn("Docker connect failed for {}: {}", session.getHost().getName(), e.getMessage());
+      dockerService.close();
+    }
+  }
+
+  private void addDockerTab(TabPane innerTabs, DockerService dockerService) {
+    try {
+      FXMLLoader loader =
+          new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/docker-panel.fxml"));
+      Parent panel = loader.load();
+      DockerPanelController ctrl = loader.getController();
+      ctrl.init(dockerService);
+      innerTabs.getTabs().add(new Tab("Docker", panel));
+      log.info("Docker tab added");
+    } catch (IOException e) {
+      log.error("Failed to load Docker panel FXML: {}", e.getMessage(), e);
+    }
+  }
+
+  private void closeDockerForSession(SshSession session) {
+    DockerService ds = dockerServices.remove(session.getHost().getId());
+    if (ds != null) ds.close();
   }
 
   private void onSessionLost(SshSession session) {
-    // Mark the tab header to indicate the connection dropped
     sessionTabPane.getTabs().stream()
         .filter(t -> t.getText().equals(session.getHost().getName()))
         .findFirst()

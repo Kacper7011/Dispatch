@@ -2,6 +2,7 @@ package dev.dispatch;
 
 import atlantafx.base.theme.NordDark;
 import dev.dispatch.ssh.SshService;
+import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.ui.MainController;
 import java.io.IOException;
@@ -21,6 +22,7 @@ public class App extends Application {
 
   private DatabaseManager dbManager;
   private SshService sshService;
+  private TunnelService tunnelService;
 
   @Override
   public void start(Stage stage) throws IOException {
@@ -29,13 +31,14 @@ public class App extends Application {
 
     dbManager = new DatabaseManager();
     sshService = new SshService();
+    tunnelService = new TunnelService();
 
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene = new Scene(loader.load(), 1280, 800);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
     MainController ctrl = loader.getController();
-    ctrl.init(dbManager, sshService);
+    ctrl.init(dbManager, sshService, tunnelService);
 
     stage.setTitle("Dispatch");
     stage.setScene(scene);
@@ -46,6 +49,7 @@ public class App extends Application {
   @Override
   public void stop() {
     log.info("Shutting down");
+    if (tunnelService != null) tunnelService.close();
     if (sshService != null) sshService.close();
     if (dbManager != null) dbManager.close();
   }
@@ -65,9 +69,8 @@ public class App extends Application {
     Font.loadFont(stream, 13);
     log.debug("Font loaded: {}", resourcePath);
   }
-  
+
   public static void main(String[] args) {
     launch(args);
   }
 }
-
