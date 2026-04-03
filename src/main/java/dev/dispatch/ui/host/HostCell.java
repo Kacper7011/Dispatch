@@ -2,6 +2,7 @@ package dev.dispatch.ui.host;
 
 import dev.dispatch.core.model.Host;
 import dev.dispatch.ssh.SessionState;
+import java.util.function.Function;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.layout.HBox;
@@ -19,12 +20,16 @@ public class HostCell extends ListCell<Host> {
   private static final Color COLOR_CONNECTED = Color.web("#95ffa4");
   private static final Color COLOR_LOST = Color.web("#ff8080");
 
+  private final Function<Long, SessionState> stateProvider;
   private final HBox container;
   private final Circle statusDot;
   private final Label nameLabel;
   private final Label addressLabel;
 
-  public HostCell() {
+  /** @param stateProvider maps host ID → current session state, queried on every cell refresh */
+  public HostCell(Function<Long, SessionState> stateProvider) {
+    this.stateProvider = stateProvider;
+
     statusDot = new Circle(5);
 
     nameLabel = new Label();
@@ -33,12 +38,14 @@ public class HostCell extends ListCell<Host> {
     addressLabel = new Label();
     addressLabel.getStyleClass().add("host-cell-address");
 
+    HBox.setMargin(statusDot, new javafx.geometry.Insets(0, 0, 0, 6));
+
     VBox textBox = new VBox(2, nameLabel, addressLabel);
     container = new HBox(10, statusDot, textBox);
     container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
     container.getStyleClass().add("host-cell-container");
 
-    setPadding(new javafx.geometry.Insets(6, 8, 6, 8));
+    setPadding(new javafx.geometry.Insets(6, 8, 6, 16));
   }
 
   @Override
@@ -50,18 +57,15 @@ public class HostCell extends ListCell<Host> {
     }
     nameLabel.setText(host.getName());
     addressLabel.setText(host.getHostname() + ":" + host.getPort());
-    statusDot.setFill(COLOR_DISCONNECTED);
+    statusDot.setFill(stateToColor(stateProvider.apply(host.getId())));
     setGraphic(container);
   }
 
-  /** Updates the status dot colour to reflect the current session state. */
-  public void updateState(SessionState state) {
-    Color color =
-        switch (state) {
-          case CONNECTED -> COLOR_CONNECTED;
-          case LOST -> COLOR_LOST;
-          default -> COLOR_DISCONNECTED;
-        };
-    statusDot.setFill(color);
+  private Color stateToColor(SessionState state) {
+    return switch (state) {
+      case CONNECTED -> COLOR_CONNECTED;
+      case LOST -> COLOR_LOST;
+      default -> COLOR_DISCONNECTED;
+    };
   }
 }

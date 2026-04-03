@@ -1,10 +1,13 @@
 package dev.dispatch.ui.host;
 
 import dev.dispatch.core.model.Host;
+import dev.dispatch.ssh.SessionState;
 import dev.dispatch.ssh.SshService;
 import dev.dispatch.storage.HostRepository;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -36,18 +39,31 @@ public class HostListController {
   private HostRepository hostRepository;
   private SshService sshService;
   private final ObservableList<Host> hosts = FXCollections.observableArrayList();
+  private final Map<Long, SessionState> sessionStates = new ConcurrentHashMap<>();
 
   /** Called by MainController after FXML injection. */
   public void init(HostRepository hostRepository, SshService sshService) {
     this.hostRepository = hostRepository;
     this.sshService = sshService;
     hostListView.setItems(hosts);
-    hostListView.setCellFactory(lv -> new HostCell());
+    hostListView.setCellFactory(
+        lv ->
+            new HostCell(
+                id -> sessionStates.getOrDefault(id, SessionState.DISCONNECTED)));
     hostListView
         .getSelectionModel()
         .selectedItemProperty()
         .addListener((obs, old, selected) -> onSelectionChanged(selected));
     loadHosts();
+  }
+
+  /**
+   * Updates the session state for a host and refreshes the list so the status dot repaints.
+   * Safe to call from any thread.
+   */
+  public void updateHostState(long hostId, SessionState state) {
+    sessionStates.put(hostId, state);
+    Platform.runLater(hostListView::refresh);
   }
 
   /** Allows MainController to set a connect action on the Connect button. */

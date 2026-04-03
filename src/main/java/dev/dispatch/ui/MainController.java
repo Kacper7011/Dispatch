@@ -5,6 +5,7 @@ import dev.dispatch.docker.DockerDetector;
 import dev.dispatch.docker.DockerException;
 import dev.dispatch.docker.DockerPresence;
 import dev.dispatch.docker.DockerService;
+import dev.dispatch.ssh.SessionState;
 import dev.dispatch.ssh.SshCredentials;
 import dev.dispatch.ssh.SshException;
 import dev.dispatch.ssh.SshService;
@@ -80,7 +81,12 @@ public class MainController {
               try {
                 SshSession session = sshService.connect(host, credentials);
                 session.setOnLost(lost -> Platform.runLater(() -> onSessionLost(lost)));
-                Platform.runLater(() -> openSessionTab(loadingTab, session));
+                Platform.runLater(
+                  () -> {
+                    hostListController.updateHostState(
+                        host.getId(), SessionState.CONNECTED);
+                    openSessionTab(loadingTab, session);
+                  });
               } catch (SshException e) {
                 log.error("Connection failed to {}: {}", host.getName(), e.getMessage(), e);
                 Platform.runLater(() -> showConnectionError(loadingTab, host, e));
@@ -102,6 +108,8 @@ public class MainController {
           terminal.dispose();
           closeDockerForSession(session);
           sshService.disconnect(session.getHost().getId());
+          hostListController.updateHostState(
+              session.getHost().getId(), SessionState.DISCONNECTED);
           updateEmptyState();
         });
 
@@ -164,6 +172,7 @@ public class MainController {
         .filter(t -> t.getText().equals(session.getHost().getName()))
         .findFirst()
         .ifPresent(t -> t.setText("⚠ " + session.getHost().getName()));
+    hostListController.updateHostState(session.getHost().getId(), SessionState.LOST);
     log.warn("Session lost: {}", session.getHost().getName());
   }
 

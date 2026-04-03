@@ -78,6 +78,9 @@ public class SshTerminalBridge {
           terminalHandler = new JavaTerminalHandler(channel, stdin);
           JSObject window = (JSObject) engine.executeScript("window");
           window.setMember("javaTerminal", terminalHandler);
+          // Sync PTY size immediately — the ResizeObserver fired before javaTerminal
+          // was available, so the initial resize notification was silently dropped.
+          engine.executeScript("notifyResize()");
           log.debug("JavaTerminalHandler registered on JS window");
         });
   }

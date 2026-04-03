@@ -60,24 +60,28 @@
     }
   });
 
-  // Notify Java of terminal size (cols x rows)
+  // Notify Java of the current terminal size (cols x rows).
+  // Called both by term.onResize and explicitly after javaTerminal is registered.
   function notifyResize() {
     if (window.javaTerminal) {
       window.javaTerminal.resize(term.cols, term.rows);
     }
   }
 
-  // Recalculate terminal size when container resizes
+  // Forward every xterm.js resize to the SSH PTY (fires after term.resize() settles).
+  term.onResize(() => notifyResize());
+
+  // Recalculate cols/rows from pixel dimensions when the container changes size.
+  // Does NOT call notifyResize() directly — term.onResize handles that.
   const resizeObserver = new ResizeObserver(() => {
     const container = document.getElementById('terminal');
     const charWidth  = term._core._renderService.dimensions.css.cell.width;
     const charHeight = term._core._renderService.dimensions.css.cell.height;
     if (charWidth > 0 && charHeight > 0) {
-      const cols = Math.floor(container.clientWidth  / charWidth);
-      const rows = Math.floor(container.clientHeight / charHeight);
+      const cols = Math.max(1, Math.floor(container.clientWidth  / charWidth));
+      const rows = Math.max(1, Math.floor(container.clientHeight / charHeight));
       if (cols !== term.cols || rows !== term.rows) {
         term.resize(cols, rows);
-        notifyResize();
       }
     }
   });
