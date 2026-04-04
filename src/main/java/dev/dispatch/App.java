@@ -95,6 +95,10 @@ public class App extends Application {
   }
 
   public static void main(String[] args) {
+    // Native DirectWrite renderer on Windows — ClearType-quality text instead of gray anti-alias.
+    // Must be set before JavaFX initialises the Prism rendering pipeline.
+    System.setProperty("prism.lcdtext", "true");
+    System.setProperty("prism.text", "native");
     launch(args);
   }
 }

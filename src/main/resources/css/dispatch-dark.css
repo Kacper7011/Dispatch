@@ -4,6 +4,7 @@
 
 * {
   -fx-font-family: "JetBrains Mono";
+  -fx-font-smoothing-type: lcd;
 
   /* Base palette */
   -cd-bg:           #161616;
@@ -276,8 +277,8 @@
 
 .title-bar-title {
   -fx-text-fill: -cd-fg-dim;
-  -fx-font-size: 11px;
-  -fx-font-weight: 500;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
 }
 
 /* Traffic-light window controls */
@@ -340,7 +341,8 @@
 
 .sidebar-header {
   -fx-text-fill: -cd-fg-dim2;
-  -fx-font-size: 9px;
+  -fx-font-size: 10px;
+  -fx-font-weight: bold;
 }
 
 .sidebar-count {
@@ -383,12 +385,13 @@
 
 .host-cell-name {
   -fx-text-fill: -cd-fg;
-  -fx-font-size: 12px;
+  -fx-font-size: 13px;
+  -fx-font-weight: bold;
 }
 
 .host-cell-address {
   -fx-text-fill: -cd-fg-dim2;
-  -fx-font-size: 10px;
+  -fx-font-size: 11px;
 }
 
 /* ============================================================
@@ -491,7 +494,8 @@
 
 .docker-panel-title {
   -fx-text-fill: -cd-fg-dim;
-  -fx-font-size: 11px;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
 }
 
 .docker-status-label {
@@ -602,7 +606,8 @@
 
 .container-card-name {
   -fx-text-fill: -cd-fg;
-  -fx-font-size: 11.5px;
+  -fx-font-size: 13px;
+  -fx-font-weight: bold;
 }
 
 .container-card-meta {
