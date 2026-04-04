@@ -31,11 +31,11 @@
       <Label text="DISPATCH" styleClass="title-bar-title"/>
       <Region HBox.hgrow="ALWAYS"/>
 
-      <!-- Windows / Linux: ─ □ × buttons on the right -->
+      <!-- Windows / Linux: &#x2212; &#x25A1; &#x2715; -->
       <HBox fx:id="winControls" spacing="0" alignment="CENTER">
-        <Button text="─" styleClass="win-btn"           onAction="#onMinimize"/>
-        <Button fx:id="winMaxBtn" text="□" styleClass="win-btn" onAction="#onMaximize"/>
-        <Button text="✕" styleClass="win-btn win-close-btn" onAction="#onClose"/>
+        <Button fx:id="winMinBtn"   text="&#x2212;" styleClass="win-btn"           onAction="#onMinimize"/>
+        <Button fx:id="winMaxBtn"   text="&#x25A1;" styleClass="win-btn"           onAction="#onMaximize"/>
+        <Button fx:id="winCloseBtn" text="&#x2715;" styleClass="win-btn close-btn" onAction="#onClose"/>
       </HBox>
 
     </HBox>

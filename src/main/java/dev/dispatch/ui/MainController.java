@@ -54,7 +54,9 @@ public class MainController {
   @FXML private HBox titleBar;
   @FXML private HBox trafficLights;
   @FXML private HBox winControls;
+  @FXML private Button winMinBtn;
   @FXML private Button winMaxBtn;
+  @FXML private Button winCloseBtn;
   @FXML private SplitPane mainSplitPane;
   @FXML private TabPane sessionTabPane;
   @FXML private Label emptyStateLabel;
@@ -101,7 +103,7 @@ public class MainController {
 
     // Keep maximize button icon in sync with window state
     stage.maximizedProperty().addListener(
-        (obs, old, maximized) -> winMaxBtn.setText(maximized ? "❐" : "□"));
+        (obs, old, maximized) -> winMaxBtn.setText(maximized ? "\u2750" : "\u25A1"));
 
     sessionTabPane
         .getSelectionModel()

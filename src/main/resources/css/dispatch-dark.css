@@ -298,38 +298,34 @@
 .traffic-light-min:hover   { -fx-background-color: #e6a820; }
 .traffic-light-max:hover   { -fx-background-color: #1da832; }
 
-/* Windows / Linux window controls */
-.win-btn {
-  -fx-background-color: transparent;
-  -fx-text-fill: -cd-fg-dim2;
-  -fx-border-color: transparent;
-  -fx-border-width: 0;
-  -fx-background-radius: 0;
-  -fx-border-radius: 0;
+/* Windows title bar controls.
+   .title-bar .button targets all buttons in the bar (Button always carries "button" class).
+   !important on background-color + background-insets is needed to fully override AtlantaFX,
+   which sets both on .button in its user-agent stylesheet. */
+.title-bar .button {
+  -fx-background-color: transparent !important;
+  -fx-background-insets: 0 !important;
+  -fx-background-radius: 0 !important;
+  -fx-border-color: transparent !important;
+  -fx-border-width: 0 !important;
+  -fx-text-fill: -cd-fg-dim;
   -fx-padding: 0;
   -fx-min-width: 46px;
   -fx-min-height: 38px;
   -fx-max-height: 38px;
-  -fx-font-size: 13px;
+  -fx-font-size: 14px;
   -fx-cursor: hand;
 }
 
-.win-btn:hover {
-  -fx-background-color: rgba(255, 255, 255, 0.07);
+.title-bar .button:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.09) !important;
+  -fx-background-insets: 0 !important;
   -fx-text-fill: -cd-fg;
 }
 
-.win-btn:pressed {
-  -fx-background-color: rgba(255, 255, 255, 0.13);
-}
-
-.win-close-btn:hover {
-  -fx-background-color: #c42b1c;
-  -fx-text-fill: white;
-}
-
-.win-close-btn:pressed {
-  -fx-background-color: #b0261a;
+.title-bar .button:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.15) !important;
+  -fx-background-insets: 0 !important;
 }
 
 /* ============================================================
