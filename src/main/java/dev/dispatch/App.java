@@ -10,6 +10,9 @@ import java.io.InputStream;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -34,14 +37,17 @@ public class App extends Application {
     sshService = new SshService();
     tunnelService = new TunnelService();
 
-    // Remove OS title bar — the app draws its own
-    stage.initStyle(StageStyle.UNDECORATED);
+    // TRANSPARENT lets us draw our own rounded corners and border
+    stage.initStyle(StageStyle.TRANSPARENT);
 
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene = new Scene(loader.load(), 1280, 800);
+    scene.setFill(Color.TRANSPARENT);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
-    // Scene must be attached before init so resize helpers can reference it
+    // Clip the root to a rounded rectangle so children don't bleed out at the corners
+    applyRoundedClip((Region) scene.getRoot());
+
     stage.setScene(scene);
 
     MainController ctrl = loader.getController();
@@ -60,8 +66,20 @@ public class App extends Application {
     if (dbManager != null) dbManager.close();
   }
 
+  /**
+   * Binds a rounded-rectangle clip to the root pane so that all children are visually clipped to
+   * the app's rounded corners. The clip tracks the root's size as the window is resized.
+   */
+  private void applyRoundedClip(Region root) {
+    Rectangle clip = new Rectangle();
+    clip.setArcWidth(12);
+    clip.setArcHeight(12);
+    clip.widthProperty().bind(root.widthProperty());
+    clip.heightProperty().bind(root.heightProperty());
+    root.setClip(clip);
+  }
+
   private void loadFonts() {
-    // Place fonts in src/main/resources/fonts/JetBrainsMono/ — download from jetbrains.com/lp/mono
     loadFont("/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf");
     loadFont("/fonts/JetBrainsMono/JetBrainsMono-Bold.ttf");
   }

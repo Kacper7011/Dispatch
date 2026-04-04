@@ -27,6 +27,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
@@ -51,6 +52,9 @@ public class MainController {
   // ── FXML injected ───────────────────────────────────────────────────────────
   @FXML private HostListController hostListController;
   @FXML private HBox titleBar;
+  @FXML private HBox trafficLights;
+  @FXML private HBox winControls;
+  @FXML private Button winMaxBtn;
   @FXML private SplitPane mainSplitPane;
   @FXML private TabPane sessionTabPane;
   @FXML private Label emptyStateLabel;
@@ -90,9 +94,14 @@ public class MainController {
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
 
+    configureWindowControls();
     configureSplitPane();
     setupTitleBarDrag();
     setupWindowResize();
+
+    // Keep maximize button icon in sync with window state
+    stage.maximizedProperty().addListener(
+        (obs, old, maximized) -> winMaxBtn.setText(maximized ? "❐" : "□"));
 
     sessionTabPane
         .getSelectionModel()
@@ -118,6 +127,18 @@ public class MainController {
   @FXML
   private void onMaximize() {
     stage.setMaximized(!stage.isMaximized());
+  }
+
+  // ── Window controls (OS-specific) ────────────────────────────────────────────
+
+  private void configureWindowControls() {
+    String os = System.getProperty("os.name", "").toLowerCase();
+    boolean isMac = os.contains("mac");
+    // macOS: traffic lights visible, Windows/Linux controls hidden
+    trafficLights.setVisible(isMac);
+    trafficLights.setManaged(isMac);
+    winControls.setVisible(!isMac);
+    winControls.setManaged(!isMac);
   }
 
   // ── Split-pane layout ─────────────────────────────────────────────────────────

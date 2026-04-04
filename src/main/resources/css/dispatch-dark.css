@@ -33,8 +33,17 @@
 }
 
 .root {
-  -fx-background-color: -cd-bg;
+  -fx-background-color: transparent;
   -fx-base: -cd-bg;
+}
+
+/* App window — rounded corners + border */
+.app-root {
+  -fx-background-color: -cd-bg;
+  -fx-background-radius: 10;
+  -fx-border-color: #484848;
+  -fx-border-width: 1.5;
+  -fx-border-radius: 10;
 }
 
 .label {
@@ -256,6 +265,8 @@
 
 .title-bar {
   -fx-background-color: -cd-bg-alt;
+  /* top-left top-right bottom-right bottom-left — match app-root radius */
+  -fx-background-radius: 9 9 0 0;
   -fx-border-color: transparent transparent -cd-border transparent;
   -fx-border-width: 0 0 1 0;
   -fx-pref-height: 38px;
@@ -286,6 +297,40 @@
 .traffic-light-close:hover { -fx-background-color: #ff3b30; }
 .traffic-light-min:hover   { -fx-background-color: #e6a820; }
 .traffic-light-max:hover   { -fx-background-color: #1da832; }
+
+/* Windows / Linux window controls */
+.win-btn {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-border-color: transparent;
+  -fx-border-width: 0;
+  -fx-background-radius: 0;
+  -fx-border-radius: 0;
+  -fx-padding: 0;
+  -fx-min-width: 46px;
+  -fx-min-height: 38px;
+  -fx-max-height: 38px;
+  -fx-font-size: 13px;
+  -fx-cursor: hand;
+}
+
+.win-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.07);
+  -fx-text-fill: -cd-fg;
+}
+
+.win-btn:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.13);
+}
+
+.win-close-btn:hover {
+  -fx-background-color: #c42b1c;
+  -fx-text-fill: white;
+}
+
+.win-close-btn:pressed {
+  -fx-background-color: #b0261a;
+}
 
 /* ============================================================
    Sidebar
@@ -369,6 +414,8 @@
 
 .status-bar {
   -fx-background-color: -cd-bg;
+  /* bottom corners match app-root radius */
+  -fx-background-radius: 0 0 9 9;
   -fx-border-color: -cd-border transparent transparent transparent;
   -fx-border-width: 1 0 0 0;
   -fx-min-height: 22px;
