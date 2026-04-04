@@ -26,7 +26,9 @@ public class HostCell extends ListCell<Host> {
   private final Label nameLabel;
   private final Label addressLabel;
 
-  /** @param stateProvider maps host ID → current session state, queried on every cell refresh */
+  /**
+   * @param stateProvider maps host ID → current session state, queried on every cell refresh
+   */
   public HostCell(Function<Long, SessionState> stateProvider) {
     this.stateProvider = stateProvider;
 

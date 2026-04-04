@@ -5,6 +5,7 @@ import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import java.util.List;
+import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -33,11 +34,20 @@ public class DockerPanelController {
 
   private DockerService dockerService;
   private Runnable onCloseCallback;
+  private Consumer<ContainerInfo> onOpenLogs;
+
+  /** Wires the callback that opens a new log tab in the main layout. */
+  public void setOnOpenLogs(Consumer<ContainerInfo> callback) {
+    this.onOpenLogs = callback;
+  }
 
   /** Called by MainController to wire the panel's close button back to the main layout. */
   public void setOnClose(Runnable callback) {
     this.onCloseCallback = callback;
-    closePanelBtn.setOnAction(e -> { if (onCloseCallback != null) onCloseCallback.run(); });
+    closePanelBtn.setOnAction(
+        e -> {
+          if (onCloseCallback != null) onCloseCallback.run();
+        });
   }
 
   /** Injects the connected {@link DockerService} and loads the initial container list. */
@@ -72,10 +82,13 @@ public class DockerPanelController {
     runContainerOp(() -> dockerService.removeContainer(c.getId()), "Removing " + c.getName(), c);
   }
 
-  /** Stub — log streaming will be wired in a dedicated terminal module. */
+  /** Opens a live log tab for the given container in the main layout. */
   void streamLogs(ContainerInfo c) {
-    log.info("Log streaming requested for {} — not yet implemented", c.getName());
-    setStatus("Logs: " + c.getName() + " (streaming not yet available)");
+    if (onOpenLogs != null) {
+      onOpenLogs.accept(c);
+    } else {
+      log.warn("No logs callback registered for {}", c.getName());
+    }
   }
 
   // -------------------------------------------------------------------------

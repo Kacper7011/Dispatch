@@ -5,6 +5,7 @@ import dev.dispatch.docker.DockerDetector;
 import dev.dispatch.docker.DockerException;
 import dev.dispatch.docker.DockerPresence;
 import dev.dispatch.docker.DockerService;
+import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.ssh.SessionState;
 import dev.dispatch.ssh.SshCredentials;
 import dev.dispatch.ssh.SshException;
@@ -14,6 +15,7 @@ import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.ssh.terminal.TerminalController;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
+import dev.dispatch.ui.docker.ContainerLogsController;
 import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.host.HostListController;
 import java.io.IOException;
@@ -474,6 +476,7 @@ public class MainController {
       Parent panel = loader.load();
       DockerPanelController ctrl = loader.getController();
       ctrl.init(dockerService);
+      ctrl.setOnOpenLogs(c -> openLogsTab(c, dockerService));
       ctrl.setOnClose(
           () -> {
             dockerPanelEnabled = false;
@@ -487,6 +490,17 @@ public class MainController {
     } catch (IOException e) {
       log.error("Failed to load Docker panel FXML: {}", e.getMessage(), e);
     }
+  }
+
+  private void openLogsTab(ContainerInfo container, DockerService dockerService) {
+    ContainerLogsController logsCtrl = new ContainerLogsController(dockerService, container);
+    Tab tab = new Tab("logs › " + container.getName());
+    tab.setContent(logsCtrl.createNode());
+    tab.setOnClosed(e -> logsCtrl.dispose());
+    sessionTabPane.getTabs().add(tab);
+    sessionTabPane.getSelectionModel().select(tab);
+    updateEmptyState();
+    log.info("Log tab opened for {}", container.getName());
   }
 
   private void onTabSelected(Tab tab) {

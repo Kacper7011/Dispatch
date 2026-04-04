@@ -812,3 +812,37 @@
   -fx-background-color: rgba(126, 184, 186, 0.18);
   -fx-border-color: rgba(126, 184, 186, 0.38);
 }
+
+/* ============================================================
+   Container logs tab
+   ============================================================ */
+
+.logs-root {
+  -fx-background-color: -cd-bg;
+}
+
+.logs-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+}
+
+.logs-title {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+}
+
+.logs-area {
+  -fx-background-color: -cd-bg;
+  -fx-text-fill: -cd-fg;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-border-width: 0;
+  -fx-background-insets: 0;
+  -fx-padding: 10 14 10 14;
+}
+
+.logs-area .content {
+  -fx-background-color: -cd-bg;
+}

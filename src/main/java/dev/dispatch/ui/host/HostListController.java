@@ -60,8 +60,8 @@ public class HostListController {
   }
 
   /**
-   * Updates the session state for a host and refreshes the list so the status dot repaints.
-   * Safe to call from any thread.
+   * Updates the session state for a host and refreshes the list so the status dot repaints. Safe to
+   * call from any thread.
    */
   public void updateHostState(long hostId, SessionState state) {
     sessionStates.put(hostId, state);

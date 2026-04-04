@@ -14,8 +14,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 /**
- * Custom list cell rendering a Docker container as a card with status badge, uptime,
- * thin CPU/MEM progress bars, and action buttons.
+ * Custom list cell rendering a Docker container as a card with status badge, uptime, thin CPU/MEM
+ * progress bars, and action buttons.
  *
  * <p>Built programmatically to keep full control over layout and update logic.
  */
@@ -54,18 +54,20 @@ class ContainerCard extends ListCell<ContainerInfo> {
     HBox.setHgrow(cpuBar, Priority.ALWAYS);
     HBox.setHgrow(memBar, Priority.ALWAYS);
 
-    primaryBtn.setOnAction(e -> {
-      ContainerInfo item = getItem();
-      if (item == null) return;
-      if (item.getStatus() == ContainerStatus.RUNNING) {
-        panel.stopContainer(item);
-      } else {
-        panel.startContainer(item);
-      }
-    });
-    logsBtn.setOnAction(e -> {
-      if (getItem() != null) panel.streamLogs(getItem());
-    });
+    primaryBtn.setOnAction(
+        e -> {
+          ContainerInfo item = getItem();
+          if (item == null) return;
+          if (item.getStatus() == ContainerStatus.RUNNING) {
+            panel.stopContainer(item);
+          } else {
+            panel.startContainer(item);
+          }
+        });
+    logsBtn.setOnAction(
+        e -> {
+          if (getItem() != null) panel.streamLogs(getItem());
+        });
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
