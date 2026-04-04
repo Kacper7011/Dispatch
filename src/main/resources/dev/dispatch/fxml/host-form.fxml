@@ -14,6 +14,7 @@
 <VBox
     xmlns:fx="http://javafx.com/fxml/1"
     fx:controller="dev.dispatch.ui.host.HostFormController"
+    styleClass="host-form"
     spacing="14"
     minWidth="380">
 

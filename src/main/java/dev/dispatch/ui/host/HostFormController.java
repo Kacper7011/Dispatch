@@ -161,6 +161,10 @@ public class HostFormController {
     keyPathRow.setManaged(visible);
     keyPathLabel.setVisible(visible);
     keyPathLabel.setManaged(visible);
+    // Resize the dialog to fit the updated layout
+    if (stage != null) {
+      javafx.application.Platform.runLater(stage::sizeToScene);
+    }
   }
 
   private void showError(String message) {

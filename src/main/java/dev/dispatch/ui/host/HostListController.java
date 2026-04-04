@@ -180,6 +180,7 @@ public class HostListController {
       formStage.initOwner(getOwnerWindow());
 
       Scene scene = new Scene(loader.load());
+      scene.setFill(javafx.scene.paint.Color.web("#161616"));
       scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
       formStage.setScene(scene);
       formStage.setResizable(false);
