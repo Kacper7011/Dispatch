@@ -48,8 +48,9 @@ class ContainerCard extends ListCell<ContainerInfo> {
     execBtn.getStyleClass().add("button");
     execBtn.setDisable(true);
 
-    cpuBar.setMaxWidth(Double.MAX_VALUE);
-    memBar.setMaxWidth(Double.MAX_VALUE);
+    // Bars grow up to a cap so they stay compact and don't fill the whole panel
+    cpuBar.setMaxWidth(110);
+    memBar.setMaxWidth(110);
     HBox.setHgrow(cpuBar, Priority.ALWAYS);
     HBox.setHgrow(memBar, Priority.ALWAYS);
 
@@ -71,6 +72,11 @@ class ContainerCard extends ListCell<ContainerInfo> {
     HBox nameRow = new HBox(8, nameLabel, spacer, statusBadge);
     nameRow.setAlignment(Pos.CENTER_LEFT);
 
+    // imageLabel shrinks/truncates when panel is narrow
+    imageLabel.setMinWidth(0);
+    imageLabel.setMaxWidth(Double.MAX_VALUE);
+    HBox.setHgrow(imageLabel, Priority.ALWAYS);
+
     HBox metaRow = new HBox(10, uptimeLabel, imageLabel);
     metaRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -86,6 +92,8 @@ class ContainerCard extends ListCell<ContainerInfo> {
     card.setPadding(new Insets(10, 14, 10, 14));
 
     setPadding(Insets.EMPTY);
+    // Bind card width to list cell so content reflows when the panel is resized
+    card.prefWidthProperty().bind(widthProperty().subtract(2));
   }
 
   @Override

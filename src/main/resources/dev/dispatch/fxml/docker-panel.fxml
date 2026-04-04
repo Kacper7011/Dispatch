@@ -17,10 +17,11 @@
 
   <!-- Header -->
   <HBox styleClass="docker-toolbar" alignment="CENTER_LEFT" spacing="8">
-    <padding><Insets top="10" right="12" bottom="10" left="14"/></padding>
+    <padding><Insets top="10" right="8" bottom="10" left="14"/></padding>
     <Label text="⊳  DOCKER" styleClass="docker-panel-title"/>
     <Region HBox.hgrow="ALWAYS"/>
     <Button text="↻" onAction="#onRefresh" styleClass="button"/>
+    <Button fx:id="closePanelBtn" text="✕" styleClass="docker-close-btn"/>
   </HBox>
 
   <!-- Stats row: RUNNING | STOPPED | IMAGES -->

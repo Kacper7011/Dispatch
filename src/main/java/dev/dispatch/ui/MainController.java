@@ -17,6 +17,7 @@ import dev.dispatch.storage.HostRepository;
 import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.host.HostListController;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +33,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -57,6 +60,7 @@ public class MainController {
   @FXML private Button winMinBtn;
   @FXML private Button winMaxBtn;
   @FXML private Button winCloseBtn;
+  @FXML private Button dockerToggleBtn;
   @FXML private SplitPane mainSplitPane;
   @FXML private TabPane sessionTabPane;
   @FXML private Label emptyStateLabel;
@@ -70,6 +74,8 @@ public class MainController {
   // ── Docker panel state ───────────────────────────────────────────────────────
   private final Map<Tab, Parent> dockerPanels = new HashMap<>();
   private final StackPane dockerPanelContainer = new StackPane();
+  /** Whether the user has the Docker panel toggled on. Persists across tab switches. */
+  private boolean dockerPanelEnabled = true;
 
   // ── Window drag / resize state ───────────────────────────────────────────────
   private static final int RESIZE_BORDER = 6;
@@ -97,6 +103,7 @@ public class MainController {
     hostListController.setOnConnectAction(e -> onConnectRequested());
 
     configureWindowControls();
+    loadDockerIcon();
     configureSplitPane();
     // macOS: native title bar handles dragging and resizing — skip our custom implementations
     if (!isMac()) {
@@ -115,6 +122,33 @@ public class MainController {
 
     updateEmptyState();
     log.debug("MainController initialised");
+  }
+
+  // ── Docker toggle ─────────────────────────────────────────────────────────────
+
+  private void loadDockerIcon() {
+    try (InputStream is = getClass().getResourceAsStream("/img/docker.png")) {
+      if (is == null) {
+        log.warn("Docker icon not found at /img/docker.png");
+        return;
+      }
+      ImageView iv = new ImageView(new Image(is, 20, 20, true, true));
+      dockerToggleBtn.setGraphic(iv);
+    } catch (Exception e) {
+      log.warn("Failed to load Docker icon: {}", e.getMessage());
+    }
+  }
+
+  @FXML
+  private void onDockerToggle() {
+    dockerPanelEnabled = !dockerPanelEnabled;
+    if (dockerPanelEnabled) {
+      Tab selected = sessionTabPane.getSelectionModel().getSelectedItem();
+      Parent panel = (selected != null) ? dockerPanels.get(selected) : null;
+      if (panel != null) showDockerPanel(panel);
+    } else {
+      hideDockerPanel();
+    }
   }
 
   // ── Title-bar FXML handlers ───────────────────────────────────────────────────
@@ -169,6 +203,7 @@ public class MainController {
   }
 
   private void showDockerPanel(Parent panel) {
+    if (!dockerPanelEnabled) return;
     dockerPanelContainer.getChildren().setAll(panel);
     if (!mainSplitPane.getItems().contains(dockerPanelContainer)) {
       mainSplitPane.getItems().add(dockerPanelContainer);
@@ -391,6 +426,10 @@ public class MainController {
       Parent panel = loader.load();
       DockerPanelController ctrl = loader.getController();
       ctrl.init(dockerService);
+      ctrl.setOnClose(() -> {
+        dockerPanelEnabled = false;
+        hideDockerPanel();
+      });
       dockerPanels.put(tab, panel);
       if (sessionTabPane.getSelectionModel().getSelectedItem() == tab) {
         showDockerPanel(panel);

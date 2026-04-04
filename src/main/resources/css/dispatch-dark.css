@@ -309,6 +309,58 @@
 .traffic-light-min:hover   { -fx-background-color: #e6a820; }
 .traffic-light-max:hover   { -fx-background-color: #1da832; }
 
+/* Toolbar overlaid at top-right of the tab area.
+   Transparent background so tab headers behind it remain visible.
+   Only the buttons themselves have backgrounds (see .tab-toolbar-btn). */
+.tab-toolbar {
+  -fx-background-color: transparent;
+  -fx-pref-height: 31px;
+  -fx-max-height: 31px;
+}
+
+.tab-toolbar-btn {
+  -fx-background-color: transparent !important;
+  -fx-background-insets: 0 !important;
+  -fx-background-radius: 5px !important;
+  -fx-border-color: transparent !important;
+  -fx-border-width: 0 !important;
+  -fx-padding: 4px;
+  -fx-cursor: hand;
+  -fx-min-width: 28px;
+  -fx-min-height: 28px;
+  -fx-max-height: 28px;
+  -fx-alignment: CENTER;
+  -fx-opacity: 0.85;
+}
+
+.tab-toolbar-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08) !important;
+  -fx-opacity: 1.0;
+}
+
+.tab-toolbar-btn:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Docker panel header close button */
+.docker-close-btn {
+  -fx-background-color: transparent !important;
+  -fx-background-insets: 0 !important;
+  -fx-background-radius: 4px !important;
+  -fx-border-color: transparent !important;
+  -fx-border-width: 0 !important;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+  -fx-padding: 2px 6px 2px 6px;
+  -fx-cursor: hand;
+  -fx-min-height: 22px;
+}
+
+.docker-close-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.07) !important;
+  -fx-text-fill: -cd-fg;
+}
+
 /* Windows title bar controls.
    .title-bar .button targets all buttons in the bar (Button always carries "button" class).
    !important on background-color + background-insets is needed to fully override AtlantaFX,

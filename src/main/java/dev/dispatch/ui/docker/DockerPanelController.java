@@ -7,6 +7,7 @@ import dev.dispatch.docker.model.ContainerStatus;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import org.slf4j.Logger;
@@ -28,8 +29,16 @@ public class DockerPanelController {
   @FXML private Label statStoppedCount;
   @FXML private Label statImagesCount;
   @FXML private Label statusLabel;
+  @FXML private Button closePanelBtn;
 
   private DockerService dockerService;
+  private Runnable onCloseCallback;
+
+  /** Called by MainController to wire the panel's close button back to the main layout. */
+  public void setOnClose(Runnable callback) {
+    this.onCloseCallback = callback;
+    closePanelBtn.setOnAction(e -> { if (onCloseCallback != null) onCloseCallback.run(); });
+  }
 
   /** Injects the connected {@link DockerService} and loads the initial container list. */
   public void init(DockerService dockerService) {
