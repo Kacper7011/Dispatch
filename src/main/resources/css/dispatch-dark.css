@@ -47,6 +47,15 @@
   -fx-border-radius: 10;
 }
 
+/* macOS: native window chrome handles the border and top corners — flatten them so the
+   content area meets the native title bar without a visible gap or double rounding. */
+.app-root.mac-chrome {
+  -fx-background-radius: 0 0 10 10;
+  -fx-border-color: transparent;
+  -fx-border-width: 0;
+  -fx-border-radius: 0;
+}
+
 .label {
   -fx-text-fill: -cd-fg;
 }

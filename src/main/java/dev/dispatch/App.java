@@ -46,7 +46,10 @@ public class App extends Application {
     Scene scene = new Scene(loader.load(), 1280, 800);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
-    if (!isMac) {
+    if (isMac) {
+      // Let macOS draw the window chrome; flatten our top corners so they meet the native title bar
+      scene.getRoot().getStyleClass().add("mac-chrome");
+    } else {
       // Transparent fill + rounded clip only needed for our custom chrome on Windows/Linux
       scene.setFill(Color.TRANSPARENT);
       applyRoundedClip((Region) scene.getRoot());
