@@ -12,6 +12,7 @@ public class Host {
   private String username;
   private AuthType authType;
   private String keyPath;
+  private boolean keyNoPassphrase;
   private LocalDateTime createdAt;
 
   /** No-arg constructor for use by mappers. */
@@ -83,6 +84,14 @@ public class Host {
 
   public void setKeyPath(String keyPath) {
     this.keyPath = keyPath;
+  }
+
+  public boolean isKeyNoPassphrase() {
+    return keyNoPassphrase;
+  }
+
+  public void setKeyNoPassphrase(boolean keyNoPassphrase) {
+    this.keyNoPassphrase = keyNoPassphrase;
   }
 
   public LocalDateTime getCreatedAt() {

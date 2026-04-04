@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -60,8 +62,9 @@ public class MainController {
   @FXML private Button winMinBtn;
   @FXML private Button winMaxBtn;
   @FXML private Button winCloseBtn;
-  @FXML private Button dockerToggleBtn;
+  private final Button dockerToggleBtn = new Button();
   @FXML private SplitPane mainSplitPane;
+  @FXML private StackPane terminalArea;
   @FXML private TabPane sessionTabPane;
   @FXML private Label emptyStateLabel;
 
@@ -69,11 +72,13 @@ public class MainController {
   private Stage stage;
   private SshService sshService;
   private TunnelService tunnelService;
+  private HostRepository hostRepository;
   private final Map<Long, DockerService> dockerServices = new ConcurrentHashMap<>();
 
   // ── Docker panel state ───────────────────────────────────────────────────────
   private final Map<Tab, Parent> dockerPanels = new HashMap<>();
   private final StackPane dockerPanelContainer = new StackPane();
+
   /** Whether the user has the Docker panel toggled on. Persists across tab switches. */
   private boolean dockerPanelEnabled = true;
 
@@ -90,20 +95,16 @@ public class MainController {
 
   /** Called by {@link dev.dispatch.App} after FXML is loaded and the scene is attached. */
   public void init(
-      DatabaseManager dbManager,
-      SshService sshService,
-      TunnelService tunnelService,
-      Stage stage) {
+      DatabaseManager dbManager, SshService sshService, TunnelService tunnelService, Stage stage) {
     this.stage = stage;
     this.sshService = sshService;
     this.tunnelService = tunnelService;
 
-    HostRepository hostRepository = new HostRepository(dbManager);
+    this.hostRepository = new HostRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
 
     configureWindowControls();
-    loadDockerIcon();
     configureSplitPane();
     // macOS: native title bar handles dragging and resizing — skip our custom implementations
     if (!isMac()) {
@@ -112,8 +113,9 @@ public class MainController {
     }
 
     // Keep maximize button icon in sync with window state
-    stage.maximizedProperty().addListener(
-        (obs, old, maximized) -> winMaxBtn.setText(maximized ? "\u2750" : "\u25A1"));
+    stage
+        .maximizedProperty()
+        .addListener((obs, old, maximized) -> winMaxBtn.setText(maximized ? "\u2750" : "\u25A1"));
 
     sessionTabPane
         .getSelectionModel()
@@ -121,10 +123,26 @@ public class MainController {
         .addListener((obs, old, selected) -> onTabSelected(selected));
 
     updateEmptyState();
+    injectDockerToggleIntoTabBar();
     log.debug("MainController initialised");
   }
 
   // ── Docker toggle ─────────────────────────────────────────────────────────────
+
+  /**
+   * Overlays the Docker toggle button on the top-right corner of the terminal area StackPane. The
+   * button visually sits inside the tab header strip without fighting TabPane's internal clip,
+   * which JavaFX reapplies on every layout pass and previously hid the button.
+   */
+  private void injectDockerToggleIntoTabBar() {
+    dockerToggleBtn.getStyleClass().add("tab-toolbar-btn");
+    dockerToggleBtn.setOnAction(e -> onDockerToggle());
+    loadDockerIcon();
+    StackPane.setAlignment(dockerToggleBtn, Pos.TOP_RIGHT);
+    StackPane.setMargin(dockerToggleBtn, new Insets(6, 6, 0, 0));
+    terminalArea.getChildren().add(dockerToggleBtn);
+    log.info("Docker toggle injected into terminalArea");
+  }
 
   private void loadDockerIcon() {
     try (InputStream is = getClass().getResourceAsStream("/img/docker.png")) {
@@ -341,6 +359,11 @@ public class MainController {
   private void onConnectRequested() {
     Host host = hostListController.getSelectedHost();
     if (host == null) return;
+    // Skip passphrase dialog if user previously connected with no passphrase
+    if (host.getAuthType() == dev.dispatch.core.model.AuthType.KEY && host.isKeyNoPassphrase()) {
+      connectAsync(host, SshCredentials.keyNoPassphrase());
+      return;
+    }
     CredentialDialog.prompt(host).ifPresent(credentials -> connectAsync(host, credentials));
   }
 
@@ -350,21 +373,43 @@ public class MainController {
     sessionTabPane.getSelectionModel().select(loadingTab);
     updateEmptyState();
 
+    // Tracks whether the user closed the loading tab before the connection finished
+    java.util.concurrent.atomic.AtomicBoolean cancelled =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    loadingTab.setOnClosed(
+        e -> {
+          cancelled.set(true);
+          updateEmptyState();
+        });
+
     Thread.ofVirtual()
         .name("ssh-connect-" + host.getName())
         .start(
             () -> {
               try {
                 SshSession session = sshService.connect(host, credentials);
+                if (cancelled.get()) {
+                  // Tab was closed while we were connecting — drop the session immediately
+                  sshService.disconnect(host.getId());
+                  return;
+                }
                 session.setOnLost(lost -> Platform.runLater(() -> onSessionLost(lost)));
+                // Remember that this key has no passphrase so future connections skip the dialog
+                if (!credentials.hasPassphrase()
+                    && credentials.getPassword() == null
+                    && !host.isKeyNoPassphrase()) {
+                  hostRepository.markKeyNoPassphrase(host.getId());
+                }
                 Platform.runLater(
                     () -> {
                       hostListController.updateHostState(host.getId(), SessionState.CONNECTED);
                       openSessionTab(loadingTab, session);
                     });
               } catch (SshException e) {
-                log.error("Connection failed to {}: {}", host.getName(), e.getMessage(), e);
-                Platform.runLater(() -> showConnectionError(loadingTab, host, e));
+                if (!cancelled.get()) {
+                  log.error("Connection failed to {}: {}", host.getName(), e.getMessage(), e);
+                  Platform.runLater(() -> showConnectionError(loadingTab, host, e));
+                }
               }
             });
   }
@@ -377,7 +422,10 @@ public class MainController {
         e -> {
           terminal.dispose();
           closeDockerForSession(session);
-          sshService.disconnect(session.getHost().getId());
+          // Disconnect off the FX thread — jschSession.disconnect() can block on network I/O
+          Thread.ofVirtual()
+              .name("ssh-disconnect-" + session.getHost().getName())
+              .start(() -> sshService.disconnect(session.getHost().getId()));
           hostListController.updateHostState(session.getHost().getId(), SessionState.DISCONNECTED);
           dockerPanels.remove(tab);
           updateEmptyState();
@@ -426,10 +474,11 @@ public class MainController {
       Parent panel = loader.load();
       DockerPanelController ctrl = loader.getController();
       ctrl.init(dockerService);
-      ctrl.setOnClose(() -> {
-        dockerPanelEnabled = false;
-        hideDockerPanel();
-      });
+      ctrl.setOnClose(
+          () -> {
+            dockerPanelEnabled = false;
+            hideDockerPanel();
+          });
       dockerPanels.put(tab, panel);
       if (sessionTabPane.getSelectionModel().getSelectedItem() == tab) {
         showDockerPanel(panel);

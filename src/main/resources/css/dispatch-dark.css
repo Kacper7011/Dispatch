@@ -309,26 +309,17 @@
 .traffic-light-min:hover   { -fx-background-color: #e6a820; }
 .traffic-light-max:hover   { -fx-background-color: #1da832; }
 
-/* Toolbar overlaid at top-right of the tab area.
-   Transparent background so tab headers behind it remain visible.
-   Only the buttons themselves have backgrounds (see .tab-toolbar-btn). */
-.tab-toolbar {
-  -fx-background-color: transparent;
-  -fx-pref-height: 31px;
-  -fx-max-height: 31px;
-}
-
+/* Icon button injected into the tab-header-area (e.g. Docker toggle). */
 .tab-toolbar-btn {
   -fx-background-color: transparent !important;
   -fx-background-insets: 0 !important;
   -fx-background-radius: 5px !important;
   -fx-border-color: transparent !important;
   -fx-border-width: 0 !important;
-  -fx-padding: 4px;
+  -fx-padding: 2px 4px;
   -fx-cursor: hand;
-  -fx-min-width: 28px;
-  -fx-min-height: 28px;
-  -fx-max-height: 28px;
+  -fx-min-width: 30px;
+  -fx-min-height: 26px;
   -fx-alignment: CENTER;
   -fx-opacity: 0.85;
 }
@@ -504,6 +495,40 @@
   -fx-min-height: 5px;
   -fx-max-width: 5px;
   -fx-max-height: 5px;
+}
+
+/* ============================================================
+   Credential / passphrase dialog
+   ============================================================ */
+
+.dialog-pane {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+}
+
+.dialog-pane > .header-panel {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 16 20 16 20;
+}
+
+.dialog-pane > .header-panel .label {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 12px;
+  -fx-wrap-text: true;
+}
+
+.dialog-pane > .content,
+.dialog-pane > .content.label {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0;
+}
+
+.dialog-pane .button-bar {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0 16 14 16;
 }
 
 /* ============================================================

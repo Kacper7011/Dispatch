@@ -71,16 +71,24 @@ public class DatabaseManager implements AutoCloseable {
     stmt.execute(
         """
         CREATE TABLE IF NOT EXISTS hosts (
-          id          INTEGER PRIMARY KEY AUTOINCREMENT,
-          name        TEXT    NOT NULL,
-          hostname    TEXT    NOT NULL,
-          port        INTEGER NOT NULL DEFAULT 22,
-          username    TEXT    NOT NULL,
-          auth_type   TEXT    NOT NULL,
-          key_path    TEXT,
-          created_at  TEXT    NOT NULL
+          id                INTEGER PRIMARY KEY AUTOINCREMENT,
+          name              TEXT    NOT NULL,
+          hostname          TEXT    NOT NULL,
+          port              INTEGER NOT NULL DEFAULT 22,
+          username          TEXT    NOT NULL,
+          auth_type         TEXT    NOT NULL,
+          key_path          TEXT,
+          created_at        TEXT    NOT NULL,
+          key_no_passphrase INTEGER NOT NULL DEFAULT 0
         )
         """);
+    // Idempotent migration for existing databases that predate this column
+    try {
+      stmt.execute("ALTER TABLE hosts ADD COLUMN key_no_passphrase INTEGER NOT NULL DEFAULT 0");
+      log.info("Migration: added key_no_passphrase column to hosts");
+    } catch (SQLException ignored) {
+      // Column already present — nothing to do
+    }
     log.debug("Table 'hosts' ready");
   }
 

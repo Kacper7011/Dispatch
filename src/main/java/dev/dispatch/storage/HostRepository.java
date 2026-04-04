@@ -117,6 +117,21 @@ public class HostRepository {
     }
   }
 
+  /**
+   * Persists the fact that a key-based host has no passphrase, so future connections skip the
+   * passphrase dialog entirely.
+   */
+  public void markKeyNoPassphrase(long hostId) {
+    String sql = "UPDATE hosts SET key_no_passphrase=1 WHERE id=?";
+    try (PreparedStatement stmt = connection().prepareStatement(sql)) {
+      stmt.setLong(1, hostId);
+      stmt.executeUpdate();
+      log.info("Host id={} marked as key-no-passphrase", hostId);
+    } catch (SQLException e) {
+      throw new StorageException("Failed to mark key_no_passphrase for host id=" + hostId, e);
+    }
+  }
+
   private Host mapRow(ResultSet rs) throws SQLException {
     Host host = new Host();
     host.setId(rs.getLong("id"));
@@ -126,6 +141,7 @@ public class HostRepository {
     host.setUsername(rs.getString("username"));
     host.setAuthType(AuthType.valueOf(rs.getString("auth_type")));
     host.setKeyPath(rs.getString("key_path"));
+    host.setKeyNoPassphrase(rs.getInt("key_no_passphrase") == 1);
     host.setCreatedAt(LocalDateTime.parse(rs.getString("created_at")));
     return host;
   }

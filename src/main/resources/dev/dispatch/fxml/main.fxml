@@ -52,14 +52,6 @@
         <Label fx:id="emptyStateLabel"
                text="Select a host and double-click to connect"
                styleClass="empty-state-label"/>
-        <!-- Toolbar overlaid at top-right; transparent HBox so tabs beneath stay visible.
-             pickOnBounds=false passes mouse events through empty space to the tabs. -->
-        <HBox fx:id="tabToolbar" styleClass="tab-toolbar"
-              StackPane.alignment="TOP_RIGHT" pickOnBounds="false"
-              alignment="CENTER_RIGHT" spacing="2">
-          <padding><Insets top="0" right="6" bottom="0" left="6"/></padding>
-          <Button fx:id="dockerToggleBtn" styleClass="tab-toolbar-btn" onAction="#onDockerToggle"/>
-        </HBox>
       </StackPane>
     </SplitPane>
   </center>
