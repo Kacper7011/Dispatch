@@ -281,12 +281,13 @@
   -fx-font-weight: bold;
 }
 
-/* Traffic-light window controls */
+/* Traffic-light placeholders — only shown on macOS if custom titleBar is ever used as fallback.
+   On macOS the titleBar is hidden entirely; native DECORATED controls take over. */
 .traffic-light {
-  -fx-min-width: 11px;
-  -fx-min-height: 11px;
-  -fx-max-width: 11px;
-  -fx-max-height: 11px;
+  -fx-min-width: 12px;
+  -fx-min-height: 12px;
+  -fx-max-width: 12px;
+  -fx-max-height: 12px;
   -fx-background-radius: 100;
   -fx-cursor: hand;
 }

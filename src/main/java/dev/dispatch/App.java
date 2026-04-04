@@ -37,16 +37,20 @@ public class App extends Application {
     sshService = new SshService();
     tunnelService = new TunnelService();
 
-    // TRANSPARENT lets us draw our own rounded corners and border
-    stage.initStyle(StageStyle.TRANSPARENT);
+    // macOS: DECORATED so the OS renders native traffic-light controls automatically.
+    // Windows/Linux: TRANSPARENT so we can draw our own rounded corners and custom title bar.
+    boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+    stage.initStyle(isMac ? StageStyle.DECORATED : StageStyle.TRANSPARENT);
 
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene = new Scene(loader.load(), 1280, 800);
-    scene.setFill(Color.TRANSPARENT);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
-    // Clip the root to a rounded rectangle so children don't bleed out at the corners
-    applyRoundedClip((Region) scene.getRoot());
+    if (!isMac) {
+      // Transparent fill + rounded clip only needed for our custom chrome on Windows/Linux
+      scene.setFill(Color.TRANSPARENT);
+      applyRoundedClip((Region) scene.getRoot());
+    }
 
     stage.setScene(scene);
 

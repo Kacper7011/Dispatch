@@ -98,8 +98,11 @@ public class MainController {
 
     configureWindowControls();
     configureSplitPane();
-    setupTitleBarDrag();
-    setupWindowResize();
+    // macOS: native title bar handles dragging and resizing — skip our custom implementations
+    if (!isMac()) {
+      setupTitleBarDrag();
+      setupWindowResize();
+    }
 
     // Keep maximize button icon in sync with window state
     stage.maximizedProperty().addListener(
@@ -133,14 +136,22 @@ public class MainController {
 
   // ── Window controls (OS-specific) ────────────────────────────────────────────
 
+  private static boolean isMac() {
+    return System.getProperty("os.name", "").toLowerCase().contains("mac");
+  }
+
   private void configureWindowControls() {
-    String os = System.getProperty("os.name", "").toLowerCase();
-    boolean isMac = os.contains("mac");
-    // macOS: traffic lights visible, Windows/Linux controls hidden
-    trafficLights.setVisible(isMac);
-    trafficLights.setManaged(isMac);
-    winControls.setVisible(!isMac);
-    winControls.setManaged(!isMac);
+    if (isMac()) {
+      // macOS: native DECORATED title bar provides traffic lights — hide our entire custom bar
+      titleBar.setVisible(false);
+      titleBar.setManaged(false);
+    } else {
+      // Windows/Linux: custom title bar active, traffic light placeholders hidden
+      trafficLights.setVisible(false);
+      trafficLights.setManaged(false);
+      winControls.setVisible(true);
+      winControls.setManaged(true);
+    }
   }
 
   // ── Split-pane layout ─────────────────────────────────────────────────────────
