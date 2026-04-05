@@ -1,12 +1,16 @@
 package dev.dispatch.docker;
 
+import com.github.dockerjava.api.command.InspectVolumeResponse;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ContainerPort;
 import com.github.dockerjava.api.model.Image;
+import com.github.dockerjava.api.model.Network;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import dev.dispatch.docker.model.ImageInfo;
+import dev.dispatch.docker.model.NetworkInfo;
 import dev.dispatch.docker.model.PortBinding;
+import dev.dispatch.docker.model.VolumeInfo;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +37,16 @@ class DockerMapper {
         .ports(toPorts(c.getPorts()))
         .createdAt(c.getCreated() != null ? Instant.ofEpochSecond(c.getCreated()) : Instant.EPOCH)
         .build();
+  }
+
+  /** Maps a docker-java {@link Network} to a {@link NetworkInfo}. */
+  static NetworkInfo toNetworkInfo(Network n) {
+    return new NetworkInfo(n.getId(), n.getName(), n.getDriver(), n.getScope());
+  }
+
+  /** Maps a docker-java {@link InspectVolumeResponse} to a {@link VolumeInfo}. */
+  static VolumeInfo toVolumeInfo(InspectVolumeResponse v) {
+    return new VolumeInfo(v.getName(), v.getDriver(), v.getMountpoint());
   }
 
   /** Maps a docker-java {@link Image} to an {@link ImageInfo}. */
