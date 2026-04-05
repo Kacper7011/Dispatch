@@ -8,6 +8,8 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ImageInfo;
+import dev.dispatch.docker.model.NetworkInfo;
+import dev.dispatch.docker.model.VolumeInfo;
 import dev.dispatch.ssh.SshSession;
 import dev.dispatch.ssh.Tunnel;
 import dev.dispatch.ssh.TunnelService;
@@ -224,6 +226,30 @@ public class DockerService implements AutoCloseable {
     return dockerClient.listImagesCmd().withShowAll(true).exec().stream()
         .map(DockerMapper::toImageInfo)
         .toList();
+  }
+
+  // -------------------------------------------------------------------------
+  // Network operations
+  // -------------------------------------------------------------------------
+
+  /** Returns all Docker networks on the remote host. */
+  public List<NetworkInfo> listNetworks() {
+    requireConnected();
+    log.debug("Listing networks");
+    return dockerClient.listNetworksCmd().exec().stream().map(DockerMapper::toNetworkInfo).toList();
+  }
+
+  // -------------------------------------------------------------------------
+  // Volume operations
+  // -------------------------------------------------------------------------
+
+  /** Returns all Docker volumes on the remote host. */
+  public List<VolumeInfo> listVolumes() {
+    requireConnected();
+    log.debug("Listing volumes");
+    var response = dockerClient.listVolumesCmd().exec();
+    if (response.getVolumes() == null) return List.of();
+    return response.getVolumes().stream().map(DockerMapper::toVolumeInfo).toList();
   }
 
   // -------------------------------------------------------------------------

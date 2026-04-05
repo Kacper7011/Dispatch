@@ -5,6 +5,8 @@ import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import dev.dispatch.docker.model.ImageInfo;
+import dev.dispatch.docker.model.NetworkInfo;
+import dev.dispatch.docker.model.VolumeInfo;
 import java.util.List;
 import java.util.function.Consumer;
 import javafx.application.Platform;
@@ -126,16 +128,21 @@ public class DockerPanelController {
               try {
                 List<ContainerInfo> containers = dockerService.listContainers();
                 List<ImageInfo> images = dockerService.listImages();
+                List<NetworkInfo> networks = dockerService.listNetworks();
+                List<VolumeInfo> volumes = dockerService.listVolumes();
                 Platform.runLater(
                     () -> {
                       populateContainers(containers);
                       populateImages(images);
-                      setStatus(
-                          containers.size() + " container(s) · " + images.size() + " image(s)");
+                      populateNetworks(networks);
+                      populateVolumes(volumes);
+                      setStatus(containers.size() + " containers · " + images.size() + " images");
                       log.debug(
-                          "Docker panel refreshed: {} containers, {} images",
+                          "Docker panel refreshed: {} containers, {} images, {} networks, {} volumes",
                           containers.size(),
-                          images.size());
+                          images.size(),
+                          networks.size(),
+                          volumes.size());
                     });
               } catch (DockerException e) {
                 log.error("Docker panel refresh failed: {}", e.getMessage(), e);
@@ -148,7 +155,6 @@ public class DockerPanelController {
     long running =
         containers.stream().filter(c -> c.getStatus() == ContainerStatus.RUNNING).count();
     containersSection.setBadgeText(running + " running");
-
     VBox items = containersSection.getItemsBox();
     items.getChildren().clear();
     containers.forEach(c -> items.getChildren().add(new ContainerRow(c, this)));
@@ -156,10 +162,23 @@ public class DockerPanelController {
 
   private void populateImages(List<ImageInfo> images) {
     imagesSection.setCount(images.size());
-
     VBox items = imagesSection.getItemsBox();
     items.getChildren().clear();
     images.forEach(img -> items.getChildren().add(new ImageRow(img, this)));
+  }
+
+  private void populateNetworks(List<NetworkInfo> networks) {
+    networksSection.setCount(networks.size());
+    VBox items = networksSection.getItemsBox();
+    items.getChildren().clear();
+    networks.forEach(n -> items.getChildren().add(new NetworkRow(n, this)));
+  }
+
+  private void populateVolumes(List<VolumeInfo> volumes) {
+    volumesSection.setCount(volumes.size());
+    VBox items = volumesSection.getItemsBox();
+    items.getChildren().clear();
+    volumes.forEach(v -> items.getChildren().add(new VolumeRow(v, this)));
   }
 
   private void runContainerOp(Runnable op, String description, ContainerInfo container) {
