@@ -10,15 +10,11 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -27,26 +23,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Displays live log output from a Docker container as a colour-coded list, newest lines first.
+ * Displays live log output from a Docker container in a selectable text area.
  *
  * <p>Log lines are streamed via {@link DockerService#streamLogs(String)}, batched every {@value
- * FLUSH_INTERVAL_MS} ms on {@code Schedulers.io()}, then prepended to a virtualised {@link
- * ListView} on the FX Application Thread. The subscription is disposed when the tab is closed.
+ * FLUSH_INTERVAL_MS} ms on {@code Schedulers.io()}, then appended to a read-only {@link TextArea}
+ * on the FX Application Thread. The subscription is disposed when the tab is closed.
  */
 public class ContainerLogsController {
 
   private static final Logger log = LoggerFactory.getLogger(ContainerLogsController.class);
 
-  /** Flush buffered log lines to the list at most this often. */
+  /** Flush buffered log lines to the view at most this often. */
   private static final int FLUSH_INTERVAL_MS = 100;
 
-  /** Maximum number of lines kept — oldest lines (bottom of list) are trimmed first. */
+  /** Maximum number of lines kept — oldest lines are trimmed from the top. */
   private static final int MAX_LINES = 5_000;
 
   private final DockerService dockerService;
   private final ContainerInfo container;
-  private final ObservableList<String> logLines = FXCollections.observableArrayList();
-  private final ListView<String> logView = new ListView<>(logLines);
+
+  /**
+   * Mirrors the text in {@link #logView} line-by-line so we can calculate character offsets when
+   * trimming the oldest lines without re-reading the TextArea content.
+   */
+  private final List<String> logLines = new ArrayList<>();
+
+  private final TextArea logView = new TextArea();
   private final BooleanProperty follow = new SimpleBooleanProperty(true);
   private Disposable subscription;
 
@@ -90,10 +92,9 @@ public class ContainerLogsController {
   // ── Private helpers ──────────────────────────────────────────────────────────
 
   private void configureLogView() {
-    logView.getStyleClass().add("logs-list");
-    logView.setCellFactory(lv -> new LogLineCell());
-    // Allow cells to grow vertically when text wraps
-    logView.setFixedCellSize(Region.USE_COMPUTED_SIZE);
+    logView.setEditable(false);
+    logView.setWrapText(true);
+    logView.getStyleClass().add("logs-view");
   }
 
   private HBox buildToolbar() {
@@ -102,7 +103,7 @@ public class ContainerLogsController {
 
     Button clearBtn = new Button("clear");
     clearBtn.getStyleClass().addAll("button", "button-logs");
-    clearBtn.setOnAction(e -> logLines.clear());
+    clearBtn.setOnAction(e -> clearLogs());
 
     Button followBtn = new Button("follow ●");
     followBtn.getStyleClass().addAll("button", "button-logs");
@@ -116,6 +117,11 @@ public class ContainerLogsController {
     toolbar.getStyleClass().add("logs-toolbar");
     toolbar.setPadding(new Insets(6, 10, 6, 14));
     return toolbar;
+  }
+
+  private void clearLogs() {
+    logLines.clear();
+    logView.clear();
   }
 
   private void toggleFollow(Button followBtn) {
@@ -142,20 +148,42 @@ public class ContainerLogsController {
   }
 
   /**
-   * Appends a batch of raw log lines to the bottom of the list. Oldest lines beyond {@value
-   * MAX_LINES} are trimmed from the top. When follow is active the view scrolls to the last item.
+   * Appends a batch of raw log lines to the text area. Oldest lines beyond {@value MAX_LINES} are
+   * trimmed from the top. When follow is active the view scrolls to the last line.
    */
   private void appendBatch(List<String> incoming) {
     List<String> lines = splitToLines(incoming);
-    if (logLines.size() + lines.size() > MAX_LINES) {
-      int excess = logLines.size() + lines.size() - MAX_LINES;
-      logLines.remove(0, Math.min(excess, logLines.size()));
-    }
+    if (lines.isEmpty()) return;
+
+    trimIfNeeded(lines.size());
+
     logLines.addAll(lines);
+    String toAppend = String.join("\n", lines) + "\n";
 
     if (follow.get()) {
-      logView.scrollTo(logLines.size() - 1);
+      // appendText moves the caret to the end, which scrolls the viewport down
+      logView.appendText(toAppend);
+    } else {
+      // insertText at the end without moving the caret keeps the user's scroll position
+      logView.insertText(logView.getLength(), toAppend);
     }
+  }
+
+  /**
+   * Removes the oldest lines from both {@link #logLines} and the text area so that adding {@code
+   * incomingCount} lines will not exceed {@value MAX_LINES}.
+   */
+  private void trimIfNeeded(int incomingCount) {
+    int excess = logLines.size() + incomingCount - MAX_LINES;
+    if (excess <= 0) return;
+
+    int toRemove = Math.min(excess, logLines.size());
+    int charsToDelete = 0;
+    for (int i = 0; i < toRemove; i++) {
+      charsToDelete += logLines.get(i).length() + 1; // +1 for the trailing \n
+    }
+    logView.deleteText(0, charsToDelete);
+    logLines.subList(0, toRemove).clear();
   }
 
   /**
@@ -171,51 +199,5 @@ public class ContainerLogsController {
       }
     }
     return result;
-  }
-
-  // ── Log line cell ─────────────────────────────────────────────────────────────
-
-  /** List cell that colours each line according to its log level keyword and wraps long lines. */
-  private class LogLineCell extends ListCell<String> {
-
-    private static final List<String> LEVEL_CLASSES =
-        List.of("log-error", "log-warn", "log-debug", "log-info");
-
-    private final Label label = new Label();
-
-    LogLineCell() {
-      label.setWrapText(true);
-      label.setTextOverrun(OverrunStyle.CLIP);
-      // Subtract scrollbar width so the label never triggers a horizontal scrollbar
-      label.maxWidthProperty().bind(logView.widthProperty().subtract(32));
-      setGraphic(label);
-      setText(null);
-    }
-
-    @Override
-    protected void updateItem(String line, boolean empty) {
-      super.updateItem(line, empty);
-      getStyleClass().removeAll(LEVEL_CLASSES);
-      if (empty || line == null) {
-        label.setText(null);
-        return;
-      }
-      label.setText(line);
-      getStyleClass().add(resolveLevelClass(line));
-    }
-
-    private static String resolveLevelClass(String line) {
-      String upper = line.toUpperCase();
-      if (upper.contains("ERROR") || upper.contains("FATAL") || upper.contains("EXCEPTION")) {
-        return "log-error";
-      }
-      if (upper.contains("WARN")) {
-        return "log-warn";
-      }
-      if (upper.contains("DEBUG") || upper.contains("TRACE")) {
-        return "log-debug";
-      }
-      return "log-info";
-    }
   }
 }
