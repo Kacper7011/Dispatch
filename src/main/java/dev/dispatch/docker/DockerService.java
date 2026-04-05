@@ -33,6 +33,7 @@ public class DockerService implements AutoCloseable {
   private final TunnelService tunnelService;
   private Tunnel tunnel;
   private DockerClient dockerClient;
+  private SshSession sshSession;
 
   public DockerService(TunnelService tunnelService) {
     this.tunnelService = tunnelService;
@@ -57,6 +58,7 @@ public class DockerService implements AutoCloseable {
   public void connect(SshSession session, String socketPath) {
     log.debug("Connecting DockerService for host {}", session.getHost().getName());
     try {
+      this.sshSession = session;
       tunnel = tunnelService.openTunnel(session, socketPath);
       dockerClient = buildClient(tunnel.getLocalPort());
       // Ping to verify the tunnel and daemon are actually reachable
@@ -172,6 +174,43 @@ public class DockerService implements AutoCloseable {
           // Close the HTTP stream when the RxJava subscriber disposes
           emitter.setCancellable(callback::close);
         });
+  }
+
+  // -------------------------------------------------------------------------
+  // Exec
+  // -------------------------------------------------------------------------
+
+  /**
+   * Opens an interactive exec session inside the given running container via SSH — equivalent to
+   * running {@code docker exec -it <id> bash} in a local terminal.
+   *
+   * <p>Uses an SSH {@code exec} channel with a PTY rather than the Docker HTTP exec API, which
+   * avoids HTTP-hijacking limitations of the httpclient5 transport.
+   *
+   * @param containerId full or short container id (container must be running)
+   * @return a {@link DockerExecSession} backed by a live JSch channel
+   * @throws DockerException if the SSH channel cannot be opened
+   */
+  public DockerExecSession openExecSession(String containerId) {
+    requireConnected();
+    if (sshSession == null) {
+      throw new DockerException("No SSH session available — call connect() first");
+    }
+    log.info("Opening exec session for container {} via SSH", containerId);
+    // Prefer bash; fall back to sh — runs on the SSH host where Docker is installed
+    String cmd =
+        "docker exec -it "
+            + containerId
+            + " /bin/sh -c 'which bash >/dev/null 2>&1 && exec bash || exec sh'";
+    try {
+      Object[] result = sshSession.openInteractiveExec(cmd, 220, 50);
+      return new DockerExecSession(
+          (com.jcraft.jsch.ChannelExec) result[0],
+          (java.io.InputStream) result[1],
+          (java.io.OutputStream) result[2]);
+    } catch (Exception e) {
+      throw new DockerException("Failed to open exec for container " + containerId, e);
+    }
   }
 
   // -------------------------------------------------------------------------

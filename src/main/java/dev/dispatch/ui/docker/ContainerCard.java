@@ -46,7 +46,10 @@ class ContainerCard extends ListCell<ContainerInfo> {
     memBar.getStyleClass().add("container-mem-bar");
     logsBtn.getStyleClass().addAll("button", "button-logs");
     execBtn.getStyleClass().add("button");
-    execBtn.setDisable(true);
+    execBtn.setOnAction(
+        e -> {
+          if (getItem() != null) panel.execContainer(getItem());
+        });
 
     // Bars grow up to a cap so they stay compact and don't fill the whole panel
     cpuBar.setMaxWidth(110);
@@ -123,6 +126,7 @@ class ContainerCard extends ListCell<ContainerInfo> {
       primaryBtn.setText("start");
       primaryBtn.getStyleClass().setAll("button-start");
     }
+    execBtn.setDisable(!running);
 
     // CPU/MEM bars are only meaningful for running containers
     setCpuMemVisible(running);

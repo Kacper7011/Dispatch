@@ -179,6 +179,39 @@ public class SshSession {
   }
 
   /**
+   * Opens an interactive exec channel with a PTY, running the given command. Equivalent to calling
+   * {@code ssh host <command>} with an allocated pseudo-terminal — suitable for {@code docker exec
+   * -it}.
+   *
+   * @param command full shell command to execute on the remote host
+   * @param columns initial terminal width
+   * @param rows initial terminal height
+   * @return array of {@code [ChannelExec, InputStream stdout, OutputStream stdin]}
+   * @throws SshException if the session is not connected or JSch cannot open the channel
+   */
+  public Object[] openInteractiveExec(String command, int columns, int rows) {
+    requireConnected();
+    log.debug("Opening interactive exec on {} ({}x{}): {}", host.getName(), columns, rows, command);
+    try {
+      ChannelExec channel = (ChannelExec) jschSession.openChannel("exec");
+      channel.setPtyType("xterm-256color");
+      channel.setPtySize(columns, rows, 0, 0);
+      channel.setPty(true);
+      channel.setCommand(command);
+
+      InputStream stdout = channel.getInputStream();
+      OutputStream stdin = channel.getOutputStream();
+
+      channel.connect(CONNECT_TIMEOUT_MS);
+      log.info("Interactive exec opened on {} ({}x{})", host.getName(), columns, rows);
+      return new Object[] {channel, stdout, stdin};
+
+    } catch (JSchException | IOException e) {
+      throw new SshException("Failed to open interactive exec on " + host.getName(), e);
+    }
+  }
+
+  /**
    * Opens a raw JSch channel of the given type. Package-private — used by TunnelService.
    *
    * @throws SshException if the session is not connected or JSch fails to open the channel

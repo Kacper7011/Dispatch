@@ -16,6 +16,7 @@ import dev.dispatch.ssh.terminal.TerminalController;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
 import dev.dispatch.ui.docker.ContainerLogsController;
+import dev.dispatch.ui.docker.DockerExecController;
 import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.host.HostListController;
 import java.io.IOException;
@@ -477,6 +478,7 @@ public class MainController {
       DockerPanelController ctrl = loader.getController();
       ctrl.init(dockerService);
       ctrl.setOnOpenLogs(c -> openLogsTab(c, dockerService));
+      ctrl.setOnOpenExec(c -> openDockerExecTab(c, dockerService));
       ctrl.setOnClose(
           () -> {
             dockerPanelEnabled = false;
@@ -490,6 +492,17 @@ public class MainController {
     } catch (IOException e) {
       log.error("Failed to load Docker panel FXML: {}", e.getMessage(), e);
     }
+  }
+
+  private void openDockerExecTab(ContainerInfo container, DockerService dockerService) {
+    DockerExecController execCtrl = new DockerExecController(dockerService, container);
+    Tab tab = new Tab("exec › " + container.getName());
+    tab.setContent(execCtrl.createNode());
+    tab.setOnClosed(e -> execCtrl.dispose());
+    sessionTabPane.getTabs().add(tab);
+    sessionTabPane.getSelectionModel().select(tab);
+    updateEmptyState();
+    log.info("Exec tab opened for {}", container.getName());
   }
 
   private void openLogsTab(ContainerInfo container, DockerService dockerService) {
