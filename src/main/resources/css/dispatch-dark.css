@@ -333,24 +333,6 @@
   -fx-background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-/* Docker panel header close button */
-.docker-close-btn {
-  -fx-background-color: transparent !important;
-  -fx-background-insets: 0 !important;
-  -fx-background-radius: 4px !important;
-  -fx-border-color: transparent !important;
-  -fx-border-width: 0 !important;
-  -fx-text-fill: -cd-fg-dim2;
-  -fx-font-size: 11px;
-  -fx-padding: 2px 6px 2px 6px;
-  -fx-cursor: hand;
-  -fx-min-height: 22px;
-}
-
-.docker-close-btn:hover {
-  -fx-background-color: rgba(255, 255, 255, 0.07) !important;
-  -fx-text-fill: -cd-fg;
-}
 
 /* Windows title bar controls.
    .title-bar .button targets all buttons in the bar (Button always carries "button" class).
@@ -974,4 +956,74 @@
 .docker-item-icon {
   -fx-text-fill: -cd-fg-dim2;
   -fx-font-size: 11px;
+}
+
+/* Docker panel header toolbar buttons */
+.docker-toolbar-btn {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 8px;
+  -fx-background-radius: 8px;
+  -fx-font-size: 13px;
+  -fx-padding: 5 10 5 10;
+  -fx-cursor: hand;
+  -fx-min-width: 34px;
+  -fx-min-height: 34px;
+}
+
+.docker-toolbar-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-text-fill: -cd-fg;
+}
+
+.docker-toolbar-btn:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.13);
+}
+
+/* Container row hover action buttons */
+.docker-action-btn {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 5px;
+  -fx-background-radius: 5px;
+  -fx-font-size: 11px;
+  -fx-padding: 3 7 3 7;
+  -fx-cursor: hand;
+  -fx-min-width: 28px;
+  -fx-min-height: 22px;
+}
+
+.docker-action-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-border-color: -cd-border2;
+  -fx-text-fill: -cd-fg;
+}
+
+.docker-action-btn:disabled {
+  -fx-opacity: 0.3;
+  -fx-cursor: default;
+}
+
+.docker-action-stop {
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-stop:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-border-color: rgba(212, 126, 126, 0.3);
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-start {
+  -fx-text-fill: -cd-success;
+}
+
+.docker-action-start:hover {
+  -fx-background-color: rgba(133, 196, 145, 0.12);
+  -fx-border-color: rgba(133, 196, 145, 0.3);
+  -fx-text-fill: -cd-success;
 }

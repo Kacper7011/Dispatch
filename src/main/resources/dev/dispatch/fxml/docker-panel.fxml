@@ -16,11 +16,11 @@
 
   <!-- Header toolbar -->
   <HBox styleClass="docker-toolbar" alignment="CENTER_LEFT" spacing="8">
-    <padding><Insets top="10" right="8" bottom="10" left="14"/></padding>
+    <padding><Insets top="8" right="10" bottom="8" left="14"/></padding>
     <Label text="DOCKER" styleClass="docker-panel-title"/>
     <Region HBox.hgrow="ALWAYS"/>
-    <Button text="↻" onAction="#onRefresh" styleClass="button"/>
-    <Button fx:id="closePanelBtn" text="✕" styleClass="docker-close-btn"/>
+    <Button text="⟳" onAction="#onRefresh" styleClass="docker-toolbar-btn"/>
+    <Button fx:id="closePanelBtn" text="✕" styleClass="docker-toolbar-btn"/>
   </HBox>
 
   <!-- Scrollable tree content — sections are added programmatically by the controller -->
