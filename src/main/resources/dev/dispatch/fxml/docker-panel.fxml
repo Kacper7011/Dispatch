@@ -3,8 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -15,39 +14,23 @@
     prefWidth="280"
     styleClass="docker-panel">
 
-  <!-- Header -->
+  <!-- Header toolbar -->
   <HBox styleClass="docker-toolbar" alignment="CENTER_LEFT" spacing="8">
     <padding><Insets top="10" right="8" bottom="10" left="14"/></padding>
-    <Label text="⊳  DOCKER" styleClass="docker-panel-title"/>
+    <Label text="DOCKER" styleClass="docker-panel-title"/>
     <Region HBox.hgrow="ALWAYS"/>
     <Button text="↻" onAction="#onRefresh" styleClass="button"/>
     <Button fx:id="closePanelBtn" text="✕" styleClass="docker-close-btn"/>
   </HBox>
 
-  <!-- Stats row: RUNNING | STOPPED | IMAGES -->
-  <HBox styleClass="docker-stats-row" alignment="CENTER">
-    <VBox styleClass="docker-stat-box" alignment="CENTER" HBox.hgrow="ALWAYS">
-      <Label fx:id="statRunningCount" text="0" styleClass="docker-stat-number docker-stat-running"/>
-      <Label text="RUNNING" styleClass="docker-stat-label"/>
-    </VBox>
-    <Separator orientation="VERTICAL" styleClass="docker-stat-divider"/>
-    <VBox styleClass="docker-stat-box" alignment="CENTER" HBox.hgrow="ALWAYS">
-      <Label fx:id="statStoppedCount" text="0" styleClass="docker-stat-number docker-stat-stopped"/>
-      <Label text="STOPPED" styleClass="docker-stat-label"/>
-    </VBox>
-    <Separator orientation="VERTICAL" styleClass="docker-stat-divider"/>
-    <VBox styleClass="docker-stat-box" alignment="CENTER" HBox.hgrow="ALWAYS">
-      <Label fx:id="statImagesCount" text="—" styleClass="docker-stat-number docker-stat-images"/>
-      <Label text="IMAGES" styleClass="docker-stat-label"/>
-    </VBox>
-  </HBox>
-
-  <!-- Container card list -->
-  <ListView fx:id="containerList" VBox.vgrow="ALWAYS" styleClass="container-list">
-    <placeholder>
-      <Label text="No containers found" styleClass="docker-empty-label"/>
-    </placeholder>
-  </ListView>
+  <!-- Scrollable tree content — sections are added programmatically by the controller -->
+  <ScrollPane
+      VBox.vgrow="ALWAYS"
+      fitToWidth="true"
+      hbarPolicy="NEVER"
+      styleClass="docker-scroll">
+    <VBox fx:id="contentBox" styleClass="docker-content"/>
+  </ScrollPane>
 
   <!-- Status bar -->
   <Label fx:id="statusLabel" styleClass="docker-status-label">

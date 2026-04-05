@@ -861,3 +861,117 @@
 .logs-view > .scroll-pane > .scroll-bar:horizontal {
   -fx-background-color: transparent;
 }
+
+/* ============================================================
+   Docker panel — tree / section layout
+   ============================================================ */
+
+.docker-scroll {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-background: -cd-bg-alt;
+}
+
+.docker-scroll > .viewport {
+  -fx-background-color: transparent;
+}
+
+.docker-content {
+  -fx-background-color: transparent;
+}
+
+/* Section container */
+.docker-section {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+/* Section header row */
+.docker-section-header {
+  -fx-background-color: -cd-bg-alt;
+  -fx-cursor: hand;
+}
+
+.docker-section-header:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.docker-section-arrow {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+.docker-section-title {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+  -fx-font-weight: bold;
+}
+
+.docker-section-badge {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 9px;
+  -fx-background-color: -cd-bg-highlight;
+  -fx-background-radius: 100;
+  -fx-padding: 2 7 2 7;
+}
+
+/* Section items container */
+.docker-section-items {
+  -fx-background-color: transparent;
+}
+
+/* Generic item row */
+.docker-item-row {
+  -fx-background-color: transparent;
+  -fx-cursor: hand;
+}
+
+.docker-item-row:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.docker-item-selected {
+  -fx-background-color: rgba(126, 184, 186, 0.08);
+}
+
+/* Status dot */
+.docker-item-dot {
+  -fx-min-width: 7px;
+  -fx-max-width: 7px;
+  -fx-min-height: 7px;
+  -fx-max-height: 7px;
+  -fx-background-radius: 100;
+}
+
+.docker-dot-running {
+  -fx-background-color: -cd-success;
+}
+
+.docker-dot-warning {
+  -fx-background-color: -cd-warning;
+}
+
+.docker-dot-stopped {
+  -fx-background-color: -cd-fg-dim2;
+}
+
+/* Item labels */
+.docker-item-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 12px;
+}
+
+.docker-item-name-dim {
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.docker-item-meta {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+}
+
+.docker-item-icon {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+}
