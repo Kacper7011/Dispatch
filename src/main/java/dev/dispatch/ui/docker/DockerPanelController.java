@@ -35,10 +35,16 @@ public class DockerPanelController {
   private DockerService dockerService;
   private Runnable onCloseCallback;
   private Consumer<ContainerInfo> onOpenLogs;
+  private Consumer<ContainerInfo> onOpenExec;
 
   /** Wires the callback that opens a new log tab in the main layout. */
   public void setOnOpenLogs(Consumer<ContainerInfo> callback) {
     this.onOpenLogs = callback;
+  }
+
+  /** Wires the callback that opens a new exec terminal tab in the main layout. */
+  public void setOnOpenExec(Consumer<ContainerInfo> callback) {
+    this.onOpenExec = callback;
   }
 
   /** Called by MainController to wire the panel's close button back to the main layout. */
@@ -88,6 +94,15 @@ public class DockerPanelController {
       onOpenLogs.accept(c);
     } else {
       log.warn("No logs callback registered for {}", c.getName());
+    }
+  }
+
+  /** Opens an interactive exec terminal tab for the given container in the main layout. */
+  void execContainer(ContainerInfo c) {
+    if (onOpenExec != null) {
+      onOpenExec.accept(c);
+    } else {
+      log.warn("No exec callback registered for {}", c.getName());
     }
   }
 
