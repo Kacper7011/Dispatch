@@ -4,16 +4,21 @@ import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -22,25 +27,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Displays live log output from a Docker container in a scrollable, read-only text area.
+ * Displays live log output from a Docker container as a colour-coded list, newest lines first.
  *
- * <p>Log lines are streamed via {@link DockerService#streamLogs(String)}, subscribed on {@code
- * Schedulers.io()}, and appended to the UI on the FX Application Thread. Auto-scroll ("follow") can
- * be toggled by the user; the subscription is disposed when the tab is closed.
+ * <p>Log lines are streamed via {@link DockerService#streamLogs(String)}, batched every {@value
+ * FLUSH_INTERVAL_MS} ms on {@code Schedulers.io()}, then prepended to a virtualised {@link
+ * ListView} on the FX Application Thread. The subscription is disposed when the tab is closed.
  */
 public class ContainerLogsController {
 
   private static final Logger log = LoggerFactory.getLogger(ContainerLogsController.class);
 
-  /** Flush buffered log lines to the TextArea at most this often. */
+  /** Flush buffered log lines to the list at most this often. */
   private static final int FLUSH_INTERVAL_MS = 100;
 
-  /** Maximum number of lines kept in the TextArea — older lines are trimmed from the top. */
+  /** Maximum number of lines kept — oldest lines (bottom of list) are trimmed first. */
   private static final int MAX_LINES = 5_000;
 
   private final DockerService dockerService;
   private final ContainerInfo container;
-  private final TextArea logArea = new TextArea();
+  private final ObservableList<String> logLines = FXCollections.observableArrayList();
+  private final ListView<String> logView = new ListView<>(logLines);
   private final BooleanProperty follow = new SimpleBooleanProperty(true);
   private Disposable subscription;
 
@@ -61,9 +67,9 @@ public class ContainerLogsController {
    * <p>Also starts log streaming — call this only once per instance.
    */
   public VBox createNode() {
-    configureLogArea();
-    VBox root = new VBox(buildToolbar(), logArea);
-    VBox.setVgrow(logArea, Priority.ALWAYS);
+    configureLogView();
+    VBox root = new VBox(buildToolbar(), logView);
+    VBox.setVgrow(logView, Priority.ALWAYS);
     root.getStyleClass().add("logs-root");
     startStreaming();
     return root;
@@ -83,10 +89,11 @@ public class ContainerLogsController {
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 
-  private void configureLogArea() {
-    logArea.setEditable(false);
-    logArea.setWrapText(false);
-    logArea.getStyleClass().add("logs-area");
+  private void configureLogView() {
+    logView.getStyleClass().add("logs-list");
+    logView.setCellFactory(lv -> new LogLineCell());
+    // Allow cells to grow vertically when text wraps
+    logView.setFixedCellSize(Region.USE_COMPUTED_SIZE);
   }
 
   private HBox buildToolbar() {
@@ -95,7 +102,7 @@ public class ContainerLogsController {
 
     Button clearBtn = new Button("clear");
     clearBtn.getStyleClass().addAll("button", "button-logs");
-    clearBtn.setOnAction(e -> logArea.clear());
+    clearBtn.setOnAction(e -> logLines.clear());
 
     Button followBtn = new Button("follow ●");
     followBtn.getStyleClass().addAll("button", "button-logs");
@@ -129,35 +136,86 @@ public class ContainerLogsController {
                 err -> {
                   log.warn("Log stream error for {}: {}", container.getName(), err.getMessage());
                   Platform.runLater(
-                      () -> appendBatch(List.of("\n[stream ended: " + err.getMessage() + "]")));
+                      () -> appendBatch(List.of("[stream ended: " + err.getMessage() + "]")));
                 },
-                () -> Platform.runLater(() -> appendBatch(List.of("\n[stream ended]"))));
+                () -> Platform.runLater(() -> appendBatch(List.of("[stream ended]"))));
   }
 
-  private void appendBatch(List<String> lines) {
-    String chunk = String.join("", lines);
-    String current = logArea.getText();
-
-    // Trim oldest lines when the buffer exceeds the cap to bound memory usage
-    int newlineCount =
-        current.chars().filter(c -> c == '\n').sum() + chunk.chars().filter(c -> c == '\n').sum();
-    if (newlineCount > MAX_LINES) {
-      int excess = newlineCount - MAX_LINES;
-      int cutAt = 0;
-      for (int i = 0; i < excess; i++) {
-        cutAt = current.indexOf('\n', cutAt) + 1;
-        if (cutAt <= 0) {
-          cutAt = current.length();
-          break;
-        }
-      }
-      logArea.setText(current.substring(cutAt) + chunk);
-    } else {
-      logArea.appendText(chunk);
+  /**
+   * Appends a batch of raw log lines to the bottom of the list. Oldest lines beyond {@value
+   * MAX_LINES} are trimmed from the top. When follow is active the view scrolls to the last item.
+   */
+  private void appendBatch(List<String> incoming) {
+    List<String> lines = splitToLines(incoming);
+    if (logLines.size() + lines.size() > MAX_LINES) {
+      int excess = logLines.size() + lines.size() - MAX_LINES;
+      logLines.remove(0, Math.min(excess, logLines.size()));
     }
+    logLines.addAll(lines);
 
     if (follow.get()) {
-      logArea.setScrollTop(Double.MAX_VALUE);
+      logView.scrollTo(logLines.size() - 1);
+    }
+  }
+
+  /**
+   * Splits raw Docker frame strings (which may contain embedded newlines) into individual lines,
+   * stripping blank entries.
+   */
+  private static List<String> splitToLines(List<String> raw) {
+    List<String> result = new ArrayList<>();
+    for (String chunk : raw) {
+      String[] parts = chunk.split("\n", -1);
+      for (String part : parts) {
+        if (!part.isBlank()) result.add(part);
+      }
+    }
+    return result;
+  }
+
+  // ── Log line cell ─────────────────────────────────────────────────────────────
+
+  /** List cell that colours each line according to its log level keyword and wraps long lines. */
+  private class LogLineCell extends ListCell<String> {
+
+    private static final List<String> LEVEL_CLASSES =
+        List.of("log-error", "log-warn", "log-debug", "log-info");
+
+    private final Label label = new Label();
+
+    LogLineCell() {
+      label.setWrapText(true);
+      label.setTextOverrun(OverrunStyle.CLIP);
+      // Subtract scrollbar width so the label never triggers a horizontal scrollbar
+      label.maxWidthProperty().bind(logView.widthProperty().subtract(32));
+      setGraphic(label);
+      setText(null);
+    }
+
+    @Override
+    protected void updateItem(String line, boolean empty) {
+      super.updateItem(line, empty);
+      getStyleClass().removeAll(LEVEL_CLASSES);
+      if (empty || line == null) {
+        label.setText(null);
+        return;
+      }
+      label.setText(line);
+      getStyleClass().add(resolveLevelClass(line));
+    }
+
+    private static String resolveLevelClass(String line) {
+      String upper = line.toUpperCase();
+      if (upper.contains("ERROR") || upper.contains("FATAL") || upper.contains("EXCEPTION")) {
+        return "log-error";
+      }
+      if (upper.contains("WARN")) {
+        return "log-warn";
+      }
+      if (upper.contains("DEBUG") || upper.contains("TRACE")) {
+        return "log-debug";
+      }
+      return "log-info";
     }
   }
 }

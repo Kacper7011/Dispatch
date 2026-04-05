@@ -833,16 +833,45 @@
   -fx-font-size: 11px;
 }
 
-.logs-area {
+.logs-list {
   -fx-background-color: -cd-bg;
-  -fx-text-fill: -cd-fg;
-  -fx-font-family: -cd-mono;
-  -fx-font-size: 11px;
-  -fx-border-width: 0;
-  -fx-background-insets: 0;
-  -fx-padding: 10 14 10 14;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
 }
 
-.logs-area .content {
-  -fx-background-color: -cd-bg;
+.logs-list .list-cell {
+  -fx-background-color: transparent;
+  -fx-padding: 1 14 1 14;
+  -fx-border-color: transparent;
+}
+
+.logs-list .list-cell .label {
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-text-fill: inherit;
+}
+
+.logs-list .list-cell:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.logs-list .list-cell:selected {
+  -fx-background-color: rgba(126, 184, 186, 0.07);
+}
+
+/* Log level colours — target the Label inside the cell (graphic node) */
+.logs-list .list-cell.log-error .label {
+  -fx-text-fill: -cd-error;
+}
+
+.logs-list .list-cell.log-warn .label {
+  -fx-text-fill: -cd-warning;
+}
+
+.logs-list .list-cell.log-info .label {
+  -fx-text-fill: -cd-fg;
+}
+
+.logs-list .list-cell.log-debug .label {
+  -fx-text-fill: -cd-fg-dim2;
 }
