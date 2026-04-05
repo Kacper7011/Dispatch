@@ -60,6 +60,15 @@
     }
   });
 
+  // Copy selected text to the system clipboard via the Java bridge.
+  // navigator.clipboard is unavailable in WebView (no secure context).
+  term.onSelectionChange(() => {
+    const sel = term.getSelection();
+    if (sel && window.javaTerminal) {
+      window.javaTerminal.copyToClipboard(sel);
+    }
+  });
+
   // Notify Java of the current terminal size (cols x rows).
   // Called both by term.onResize and explicitly after javaTerminal is registered.
   function notifyResize() {

@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebEngine;
@@ -66,6 +67,19 @@ public class TerminalController {
         KeyEvent.KEY_PRESSED,
         event -> {
           if (!event.isControlDown() || bridge == null) return;
+
+          // Ctrl+Shift combinations are not VT100 sequences — handle paste and skip the rest
+          // so they don't get mapped to raw control characters.
+          if (event.isShiftDown()) {
+            if (event.getCode() == KeyCode.V) {
+              event.consume();
+              String text = Clipboard.getSystemClipboard().getString();
+              if (text != null && !text.isEmpty()) {
+                bridge.sendInput(text);
+              }
+            }
+            return;
+          }
 
           if (event.getCode() == KeyCode.L) {
             // Erase full screen + cursor-home directly in xterm.js (fully blank, no kept line),

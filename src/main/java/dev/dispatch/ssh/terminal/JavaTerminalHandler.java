@@ -4,6 +4,9 @@ import com.jcraft.jsch.ChannelShell;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import javafx.application.Platform;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +43,23 @@ public class JavaTerminalHandler {
                 log.warn("Failed to send input to SSH channel: {}", e.getMessage());
               }
             });
+  }
+
+  /**
+   * Called by xterm.js when the terminal selection changes. Writes the selected text to the system
+   * clipboard on the FX thread.
+   *
+   * <p>{@code navigator.clipboard} is unavailable in WebView (no secure context), so clipboard
+   * access is delegated to Java.
+   */
+  public void copyToClipboard(String text) {
+    if (text == null || text.isEmpty()) return;
+    Platform.runLater(
+        () -> {
+          ClipboardContent content = new ClipboardContent();
+          content.putString(text);
+          Clipboard.getSystemClipboard().setContent(content);
+        });
   }
 
   /** Called by xterm.js when the terminal is resized. Sends a PTY window-change signal. */
