@@ -4,6 +4,8 @@ import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -29,6 +31,12 @@ import org.slf4j.LoggerFactory;
 public class ContainerLogsController {
 
   private static final Logger log = LoggerFactory.getLogger(ContainerLogsController.class);
+
+  /** Flush buffered log lines to the TextArea at most this often. */
+  private static final int FLUSH_INTERVAL_MS = 100;
+
+  /** Maximum number of lines kept in the TextArea — older lines are trimmed from the top. */
+  private static final int MAX_LINES = 5_000;
 
   private final DockerService dockerService;
   private final ContainerInfo container;
@@ -114,17 +122,40 @@ public class ContainerLogsController {
         dockerService
             .streamLogs(container.getId())
             .subscribeOn(Schedulers.io())
+            .buffer(FLUSH_INTERVAL_MS, TimeUnit.MILLISECONDS)
+            .filter(batch -> !batch.isEmpty())
             .subscribe(
-                line -> Platform.runLater(() -> appendLine(line)),
+                batch -> Platform.runLater(() -> appendBatch(batch)),
                 err -> {
                   log.warn("Log stream error for {}: {}", container.getName(), err.getMessage());
-                  Platform.runLater(() -> appendLine("\n[stream ended: " + err.getMessage() + "]"));
+                  Platform.runLater(
+                      () -> appendBatch(List.of("\n[stream ended: " + err.getMessage() + "]")));
                 },
-                () -> Platform.runLater(() -> appendLine("\n[stream ended]")));
+                () -> Platform.runLater(() -> appendBatch(List.of("\n[stream ended]"))));
   }
 
-  private void appendLine(String line) {
-    logArea.appendText(line);
+  private void appendBatch(List<String> lines) {
+    String chunk = String.join("", lines);
+    String current = logArea.getText();
+
+    // Trim oldest lines when the buffer exceeds the cap to bound memory usage
+    int newlineCount =
+        current.chars().filter(c -> c == '\n').sum() + chunk.chars().filter(c -> c == '\n').sum();
+    if (newlineCount > MAX_LINES) {
+      int excess = newlineCount - MAX_LINES;
+      int cutAt = 0;
+      for (int i = 0; i < excess; i++) {
+        cutAt = current.indexOf('\n', cutAt) + 1;
+        if (cutAt <= 0) {
+          cutAt = current.length();
+          break;
+        }
+      }
+      logArea.setText(current.substring(cutAt) + chunk);
+    } else {
+      logArea.appendText(chunk);
+    }
+
     if (follow.get()) {
       logArea.setScrollTop(Double.MAX_VALUE);
     }
