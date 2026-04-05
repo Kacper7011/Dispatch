@@ -15,6 +15,7 @@ class ImageRow extends HBox {
     setAlignment(Pos.CENTER_LEFT);
     setPadding(new Insets(5, 12, 5, 14));
     setSpacing(8);
+    setMaxWidth(Double.MAX_VALUE);
 
     Label icon = new Label("▤");
     icon.getStyleClass().add("docker-item-icon");

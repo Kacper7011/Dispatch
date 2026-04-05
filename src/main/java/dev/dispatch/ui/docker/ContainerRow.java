@@ -4,6 +4,7 @@ import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -12,54 +13,105 @@ import javafx.scene.layout.Region;
 /**
  * Compact row widget for a single Docker container — status dot, name, and uptime.
  *
- * <p>Single click selects the row; double-click opens the log tab via the panel callback.
+ * <p>On hover the uptime label is replaced by three action buttons: logs, exec, and stop/start.
+ * Single click selects the row in the panel.
  */
 class ContainerRow extends HBox {
 
   ContainerRow(ContainerInfo container, DockerPanelController panel) {
     getStyleClass().add("docker-item-row");
     setAlignment(Pos.CENTER_LEFT);
-    setPadding(new Insets(5, 12, 5, 14));
+    setPadding(new Insets(5, 10, 5, 14));
     setSpacing(8);
+    setMaxWidth(Double.MAX_VALUE);
 
-    Region dot = new Region();
-    dot.getStyleClass().addAll("docker-item-dot", dotClass(container.getStatus()));
+    Region dot = buildDot(container.getStatus());
 
     Label name = new Label(container.getName());
     name.getStyleClass().add("docker-item-name");
     if (container.getStatus() != ContainerStatus.RUNNING) {
       name.getStyleClass().add("docker-item-name-dim");
     }
-    HBox.setHgrow(name, Priority.ALWAYS);
+    name.setMinWidth(0);
     name.setMaxWidth(Double.MAX_VALUE);
+    HBox.setHgrow(name, Priority.ALWAYS);
 
     Label uptime = new Label(formatUptime(container));
     uptime.getStyleClass().add("docker-item-meta");
 
-    getChildren().addAll(dot, name, uptime);
+    HBox actions = buildActions(container, panel);
+    actions.setVisible(false);
+    actions.setManaged(false);
 
-    setOnMouseClicked(
+    getChildren().addAll(dot, name, uptime, actions);
+
+    setOnMouseEntered(
         e -> {
-          panel.selectRow(this);
-          if (e.getClickCount() == 2 && container.getStatus() == ContainerStatus.RUNNING) {
-            panel.streamLogs(container);
-          }
+          uptime.setVisible(false);
+          uptime.setManaged(false);
+          actions.setVisible(true);
+          actions.setManaged(true);
         });
+
+    setOnMouseExited(
+        e -> {
+          uptime.setVisible(true);
+          uptime.setManaged(true);
+          actions.setVisible(false);
+          actions.setManaged(false);
+        });
+
+    setOnMouseClicked(e -> panel.selectRow(this));
   }
 
-  private static String dotClass(ContainerStatus status) {
-    return switch (status) {
-      case RUNNING -> "docker-dot-running";
-      case PAUSED, RESTARTING -> "docker-dot-warning";
-      default -> "docker-dot-stopped";
-    };
+  private static Region buildDot(ContainerStatus status) {
+    Region dot = new Region();
+    String colorClass =
+        switch (status) {
+          case RUNNING -> "docker-dot-running";
+          case PAUSED, RESTARTING -> "docker-dot-warning";
+          default -> "docker-dot-stopped";
+        };
+    dot.getStyleClass().addAll("docker-item-dot", colorClass);
+    return dot;
+  }
+
+  private static HBox buildActions(ContainerInfo container, DockerPanelController panel) {
+    boolean running = container.getStatus() == ContainerStatus.RUNNING;
+
+    Button logsBtn = new Button("≡");
+    logsBtn.getStyleClass().addAll("docker-action-btn", "docker-action-logs");
+    logsBtn.setOnAction(e -> panel.streamLogs(container));
+
+    Button execBtn = new Button(">_");
+    execBtn.getStyleClass().addAll("docker-action-btn", "docker-action-exec");
+    execBtn.setDisable(!running);
+    execBtn.setOnAction(e -> panel.execContainer(container));
+
+    Button toggleBtn = buildToggleButton(container, panel, running);
+
+    HBox box = new HBox(4, logsBtn, execBtn, toggleBtn);
+    box.setAlignment(Pos.CENTER_RIGHT);
+    return box;
+  }
+
+  private static Button buildToggleButton(
+      ContainerInfo container, DockerPanelController panel, boolean running) {
+    Button btn = new Button(running ? "■" : "▶");
+    btn.getStyleClass()
+        .addAll("docker-action-btn", running ? "docker-action-stop" : "docker-action-start");
+    btn.setOnAction(
+        e -> {
+          if (running) panel.stopContainer(container);
+          else panel.startContainer(container);
+        });
+    return btn;
   }
 
   private static String formatUptime(ContainerInfo c) {
     if (c.getStatus() != ContainerStatus.RUNNING) return "stopped";
     String raw = c.getStatusText();
     if (raw == null || raw.isBlank()) return "—";
-    // "Up 22 hours" → "22h", "Up 2 minutes" → "2m", "Up 3 days" → "3d"
     return raw.replace("Up ", "")
         .replaceAll(" hours?", "h")
         .replaceAll(" minutes?", "m")
