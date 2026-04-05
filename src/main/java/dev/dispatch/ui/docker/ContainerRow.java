@@ -90,7 +90,13 @@ class ContainerRow extends HBox {
 
     Button toggleBtn = buildToggleButton(container, panel, running);
 
-    HBox box = new HBox(4, logsBtn, execBtn, toggleBtn);
+    Button removeBtn = new Button("✕");
+    removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
+    // Removing a running container is destructive — disable it; user must stop first.
+    removeBtn.setDisable(running);
+    removeBtn.setOnAction(e -> panel.removeContainer(container));
+
+    HBox box = new HBox(4, logsBtn, execBtn, toggleBtn, removeBtn);
     box.setAlignment(Pos.CENTER_RIGHT);
     return box;
   }

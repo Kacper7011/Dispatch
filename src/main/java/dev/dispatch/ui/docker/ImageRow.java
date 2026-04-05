@@ -3,11 +3,12 @@ package dev.dispatch.ui.docker;
 import dev.dispatch.docker.model.ImageInfo;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 
-/** Compact row widget for a Docker image — icon, repository name, and tag. */
+/** Compact row widget for a Docker image — icon, repository name, tag, and hover remove button. */
 class ImageRow extends HBox {
 
   ImageRow(ImageInfo image, DockerPanelController panel) {
@@ -31,8 +32,16 @@ class ImageRow extends HBox {
     Label tag = new Label(parts[1]);
     tag.getStyleClass().add("docker-item-meta");
 
-    getChildren().addAll(icon, name, tag);
+    Button removeBtn = new Button("✕");
+    removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
+    removeBtn.setVisible(false);
+    removeBtn.setManaged(false);
+    removeBtn.setOnAction(e -> panel.removeImage(image));
 
+    getChildren().addAll(icon, name, tag, removeBtn);
+
+    setOnMouseEntered(e -> { removeBtn.setVisible(true); removeBtn.setManaged(true); tag.setVisible(false); tag.setManaged(false); });
+    setOnMouseExited(e -> { removeBtn.setVisible(false); removeBtn.setManaged(false); tag.setVisible(true); tag.setManaged(true); });
     setOnMouseClicked(e -> panel.selectRow(this));
   }
 

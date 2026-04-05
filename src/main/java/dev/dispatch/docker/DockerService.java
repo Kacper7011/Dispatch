@@ -3,6 +3,7 @@ package dev.dispatch.docker;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.model.Frame;
+import com.github.dockerjava.api.model.PruneType;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
@@ -10,6 +11,7 @@ import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ImageInfo;
 import dev.dispatch.docker.model.NetworkInfo;
 import dev.dispatch.docker.model.VolumeInfo;
+import dev.dispatch.ssh.ExecResult;
 import dev.dispatch.ssh.SshSession;
 import dev.dispatch.ssh.Tunnel;
 import dev.dispatch.ssh.TunnelService;
@@ -125,7 +127,11 @@ public class DockerService implements AutoCloseable {
   public void removeContainer(String id) {
     requireConnected();
     log.info("Removing container {}", id);
-    dockerClient.removeContainerCmd(id).exec();
+    try {
+      dockerClient.removeContainerCmd(id).exec();
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to remove container " + id, e);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -228,6 +234,22 @@ public class DockerService implements AutoCloseable {
         .toList();
   }
 
+  /**
+   * Removes the image with the given id. The image must not be referenced by any container.
+   *
+   * @param id full or short image id, or a repo:tag reference
+   * @throws DockerException if the image is in use or does not exist
+   */
+  public void removeImage(String id) {
+    requireConnected();
+    log.info("Removing image {}", id);
+    try {
+      dockerClient.removeImageCmd(id).exec();
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to remove image " + id, e);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Network operations
   // -------------------------------------------------------------------------
@@ -237,6 +259,22 @@ public class DockerService implements AutoCloseable {
     requireConnected();
     log.debug("Listing networks");
     return dockerClient.listNetworksCmd().exec().stream().map(DockerMapper::toNetworkInfo).toList();
+  }
+
+  /**
+   * Removes the network with the given id. The network must have no active endpoints.
+   *
+   * @param id full or short network id
+   * @throws DockerException if the network is in use or does not exist
+   */
+  public void removeNetwork(String id) {
+    requireConnected();
+    log.info("Removing network {}", id);
+    try {
+      dockerClient.removeNetworkCmd(id).exec();
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to remove network " + id, e);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -252,9 +290,126 @@ public class DockerService implements AutoCloseable {
     return response.getVolumes().stream().map(DockerMapper::toVolumeInfo).toList();
   }
 
+  /**
+   * Removes the volume with the given name. The volume must not be in use by any container.
+   *
+   * @param name volume name
+   * @throws DockerException if the volume is in use or does not exist
+   */
+  public void removeVolume(String name) {
+    requireConnected();
+    log.info("Removing volume {}", name);
+    try {
+      dockerClient.removeVolumeCmd(name).exec();
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to remove volume " + name, e);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Prune operations
+  // -------------------------------------------------------------------------
+
+  /**
+   * Removes all stopped containers.
+   *
+   * @return human-readable summary, e.g. {@code "3 containers removed"}
+   * @throws DockerException if the daemon returns an error
+   */
+  public String pruneContainers() {
+    requireConnected();
+    log.info("Pruning stopped containers");
+    try {
+      dockerClient.pruneCmd(PruneType.CONTAINERS).exec();
+      return "Stopped containers removed";
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to prune containers", e);
+    }
+  }
+
+  /**
+   * Removes all dangling (unused, untagged) images.
+   *
+   * @return human-readable summary, e.g. {@code "5 images removed · 1.2 GB freed"}
+   * @throws DockerException if the daemon returns an error
+   */
+  public String pruneImages() {
+    requireConnected();
+    log.info("Pruning dangling images via SSH");
+    // docker-java's pruneCmd(IMAGES) has a deserialization bug in 3.3.4 — use SSH exec instead.
+    try {
+      ExecResult result = sshSession.exec("docker image prune -f 2>&1");
+      if (!result.isSuccess()) {
+        throw new DockerException("docker image prune failed: " + result.getStdout().trim());
+      }
+      String reclaimed = extractReclaimedSpace(result.getStdout());
+      return "Unused images removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
+    } catch (DockerException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to prune images", e);
+    }
+  }
+
+  /**
+   * Removes all networks not used by at least one container.
+   *
+   * @return human-readable summary, e.g. {@code "2 networks removed"}
+   * @throws DockerException if the daemon returns an error
+   */
+  public String pruneNetworks() {
+    requireConnected();
+    log.info("Pruning unused networks");
+    try {
+      dockerClient.pruneCmd(PruneType.NETWORKS).exec();
+      return "Unused networks removed";
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to prune networks", e);
+    }
+  }
+
+  /**
+   * Removes all volumes not referenced by any container.
+   *
+   * @return human-readable summary, e.g. {@code "1 volume removed · 500 MB freed"}
+   * @throws DockerException if the daemon returns an error
+   */
+  public String pruneVolumes() {
+    requireConnected();
+    log.info("Pruning unused volumes via SSH");
+    // docker-java's pruneCmd(VOLUMES) has a deserialization bug in 3.3.4 — use SSH exec instead.
+    try {
+      ExecResult result = sshSession.exec("docker volume prune -f 2>&1");
+      if (!result.isSuccess()) {
+        throw new DockerException("docker volume prune failed: " + result.getStdout().trim());
+      }
+      String reclaimed = extractReclaimedSpace(result.getStdout());
+      return "Unused volumes removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
+    } catch (DockerException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new DockerException("Failed to prune volumes", e);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Extracts the "Total reclaimed space: X" value from docker prune output.
+   * Returns an empty string if the line is not found or the value is zero.
+   */
+  private static String extractReclaimedSpace(String output) {
+    for (String line : output.lines().toList()) {
+      if (line.startsWith("Total reclaimed space:")) {
+        String value = line.substring("Total reclaimed space:".length()).trim();
+        return value.equals("0B") ? "" : value;
+      }
+    }
+    return "";
+  }
+
 
   private static DockerClient buildClient(int localPort) {
     String host = "tcp://localhost:" + localPort;

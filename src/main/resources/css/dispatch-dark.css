@@ -898,6 +898,23 @@
   -fx-padding: 2 7 2 7;
 }
 
+.docker-section-prune-btn {
+  -fx-font-family: 'JetBrains Mono', monospace;
+  -fx-font-size: 9px;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 3;
+  -fx-padding: 1 6 1 6;
+  -fx-cursor: hand;
+}
+
+.docker-section-prune-btn:hover {
+  -fx-text-fill: -cd-error;
+  -fx-border-color: rgba(212, 126, 126, 0.4);
+  -fx-background-color: rgba(212, 126, 126, 0.07);
+}
+
 /* Section items container */
 .docker-section-items {
   -fx-background-color: transparent;
@@ -1026,4 +1043,14 @@
   -fx-background-color: rgba(133, 196, 145, 0.12);
   -fx-border-color: rgba(133, 196, 145, 0.3);
   -fx-text-fill: -cd-success;
+}
+
+.docker-action-remove {
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-remove:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-border-color: rgba(212, 126, 126, 0.3);
+  -fx-text-fill: -cd-error;
 }
