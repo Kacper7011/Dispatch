@@ -1,6 +1,7 @@
 package dev.dispatch.ssh.terminal;
 
 import com.jcraft.jsch.ChannelShell;
+import dev.dispatch.core.config.AppConfig;
 import dev.dispatch.ssh.SshSession;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,8 +34,8 @@ public class TerminalController {
 
   private static final Logger log = LoggerFactory.getLogger(TerminalController.class);
 
-  private static final int INITIAL_COLS = 220;
-  private static final int INITIAL_ROWS = 50;
+  private static final int INITIAL_COLS = AppConfig.TERMINAL_INITIAL_COLS;
+  private static final int INITIAL_ROWS = AppConfig.TERMINAL_INITIAL_ROWS;
 
   private final SshSession session;
   private WebView webView;

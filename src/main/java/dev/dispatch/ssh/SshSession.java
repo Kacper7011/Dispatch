@@ -5,6 +5,7 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import dev.dispatch.core.config.AppConfig;
 import dev.dispatch.core.model.AuthType;
 import dev.dispatch.core.model.Host;
 import java.io.ByteArrayOutputStream;
@@ -13,7 +14,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +28,9 @@ public class SshSession {
 
   private static final Logger log = LoggerFactory.getLogger(SshSession.class);
 
-  private static final int CONNECT_TIMEOUT_MS = (int) Duration.ofSeconds(10).toMillis();
-  private static final int EXEC_TIMEOUT_MS = (int) Duration.ofSeconds(30).toMillis();
-  private static final int KEEPALIVE_INTERVAL_MS = (int) Duration.ofSeconds(30).toMillis();
+  private static final int CONNECT_TIMEOUT_MS = AppConfig.SSH_CONNECT_TIMEOUT_SECONDS * 1_000;
+  private static final int EXEC_TIMEOUT_MS = AppConfig.SSH_EXEC_TIMEOUT_SECONDS * 1_000;
+  private static final int KEEPALIVE_INTERVAL_MS = AppConfig.SSH_KEEPALIVE_INTERVAL_SECONDS * 1_000;
 
   private final Host host;
   private volatile SessionState state = SessionState.DISCONNECTED;
@@ -75,7 +75,7 @@ public class SshSession {
       }
 
       jschSession.setServerAliveInterval(KEEPALIVE_INTERVAL_MS);
-      jschSession.setServerAliveCountMax(3);
+      jschSession.setServerAliveCountMax(AppConfig.SSH_KEEPALIVE_MAX_FAILURES);
       log.debug("Keep-alive configured: interval={}s", KEEPALIVE_INTERVAL_MS / 1000);
 
       jschSession.connect(CONNECT_TIMEOUT_MS);
