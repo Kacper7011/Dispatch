@@ -1055,6 +1055,63 @@
   -fx-text-fill: -cd-error;
 }
 
+/* ── SSH tab split panes ──────────────────────────────────────────────────── */
+
+.ssh-tab-layout {
+  -fx-background-color: -cd-bg;
+}
+
+.pane-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 4 8 4 8;
+}
+
+.split-btn {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border2;
+  -fx-border-radius: 4;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-padding: 3 10 3 10;
+  -fx-cursor: hand;
+}
+
+.split-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.05);
+  -fx-text-fill: -cd-fg;
+}
+
+.pane-header {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 2 4 2 4;
+}
+
+.pane-close-btn {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 13px;
+  -fx-padding: 0 4 0 4;
+  -fx-cursor: hand;
+  -fx-min-width: 20;
+}
+
+.pane-close-btn:hover {
+  -fx-text-fill: -cd-error;
+}
+
+.host-picker {
+  -fx-padding: 24;
+}
+
+.host-picker > .label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+}
+
 /* ── Reconnect overlay (shown on LOST state) ──────────────────────────────── */
 
 .reconnect-overlay {

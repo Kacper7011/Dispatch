@@ -422,7 +422,7 @@ public class MainController {
 
   private void openSessionTab(Tab tab, SshSession session, SshCredentials credentials) {
     SshTabController tabCtrl =
-        new SshTabController(session, credentials, sshService, sessionRepository);
+        new SshTabController(session, credentials, sshService, sessionRepository, hostRepository);
     tabCtrl.setOnReconnected(
         newSession -> {
           tab.setText(newSession.getHost().getName());
