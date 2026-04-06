@@ -1103,6 +1103,31 @@
   -fx-text-fill: -cd-error;
 }
 
+/* ── Docker panel host sub-headers ────────────────────────────────────────── */
+
+.docker-host-header {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+.docker-host-arrow {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+.docker-host-name {
+  -fx-text-fill: -cd-accent;
+  -fx-font-size: 11px;
+}
+
+.docker-host-addr {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+/* ── Split-pane host picker ────────────────────────────────────────────────── */
+
 .host-picker {
   -fx-padding: 24;
 }

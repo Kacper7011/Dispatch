@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import javafx.scene.control.Button;
@@ -19,10 +20,10 @@ class ContainerRowController extends TableCell<ContainerInfo, ContainerInfo> {
   private final Button removeBtn = new Button("Remove");
   private final HBox buttons = new HBox(6, startBtn, stopBtn, removeBtn);
 
-  ContainerRowController(DockerPanelController panel) {
-    startBtn.setOnAction(e -> panel.startContainer(getItem()));
-    stopBtn.setOnAction(e -> panel.stopContainer(getItem()));
-    removeBtn.setOnAction(e -> panel.removeContainer(getItem()));
+  ContainerRowController(DockerService service, DockerPanelController panel) {
+    startBtn.setOnAction(e -> panel.startContainer(getItem(), service));
+    stopBtn.setOnAction(e -> panel.stopContainer(getItem(), service));
+    removeBtn.setOnAction(e -> panel.removeContainer(getItem(), service));
     removeBtn.getStyleClass().add("button-danger");
     buttons.setStyle("-fx-alignment: CENTER_LEFT; -fx-padding: 2 0 2 0;");
   }

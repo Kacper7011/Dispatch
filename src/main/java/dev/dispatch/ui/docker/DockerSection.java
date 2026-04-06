@@ -67,6 +67,15 @@ class DockerSection extends VBox {
     pruneBtn.setManaged(true);
   }
 
+  /**
+   * Hides the prune button (used when multiple hosts are connected — prune moves to host headers).
+   */
+  void clearPruneAction() {
+    pruneBtn.setVisible(false);
+    pruneBtn.setManaged(false);
+    pruneBtn.setOnAction(null);
+  }
+
   /** Returns the VBox into which item rows should be added. */
   VBox getItemsBox() {
     return itemsBox;

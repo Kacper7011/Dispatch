@@ -23,7 +23,6 @@ import dev.dispatch.ui.host.HostListController;
 import dev.dispatch.ui.ssh.SshTabController;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
@@ -82,8 +81,11 @@ public class MainController {
   private final Map<Long, DockerService> dockerServices = new ConcurrentHashMap<>();
 
   // ── Docker panel state ───────────────────────────────────────────────────────
-  private final Map<Tab, Parent> dockerPanels = new HashMap<>();
   private final StackPane dockerPanelContainer = new StackPane();
+  private DockerPanelController dockerPanelController;
+
+  /** Maps each SSH tab to the set of host ids connected in that tab (split panes may have many). */
+  private final Map<Tab, java.util.Set<Long>> tabDockerHosts = new ConcurrentHashMap<>();
 
   /** Whether the user has the Docker panel toggled on. Persists across tab switches. */
   private boolean dockerPanelEnabled = true;
@@ -167,10 +169,8 @@ public class MainController {
   @FXML
   private void onDockerToggle() {
     dockerPanelEnabled = !dockerPanelEnabled;
-    if (dockerPanelEnabled) {
-      Tab selected = sessionTabPane.getSelectionModel().getSelectedItem();
-      Parent panel = (selected != null) ? dockerPanels.get(selected) : null;
-      if (panel != null) showDockerPanel(panel);
+    if (dockerPanelEnabled && dockerPanelController != null) {
+      showDockerPanel();
     } else {
       hideDockerPanel();
     }
@@ -227,9 +227,8 @@ public class MainController {
     SplitPane.setResizableWithParent(dockerPanelContainer, Boolean.FALSE);
   }
 
-  private void showDockerPanel(Parent panel) {
-    if (!dockerPanelEnabled) return;
-    dockerPanelContainer.getChildren().setAll(panel);
+  private void showDockerPanel() {
+    if (!dockerPanelEnabled || dockerPanelController == null) return;
     if (!mainSplitPane.getItems().contains(dockerPanelContainer)) {
       mainSplitPane.getItems().add(dockerPanelContainer);
       mainSplitPane.setDividerPosition(1, 0.78);
@@ -237,8 +236,9 @@ public class MainController {
   }
 
   private void hideDockerPanel() {
+    // Only remove the container from the split pane — do NOT clear its children.
+    // The panel node is global and must survive hide/show cycles.
     mainSplitPane.getItems().remove(dockerPanelContainer);
-    dockerPanelContainer.getChildren().clear();
   }
 
   // ── Window drag (title bar) ────────────────────────────────────────────────────
@@ -427,10 +427,9 @@ public class MainController {
         newSession -> {
           tab.setText(newSession.getHost().getName());
           hostListController.updateHostState(newSession.getHost().getId(), SessionState.CONNECTED);
-          // Drop stale Docker panel so detectDockerAsync can attach a fresh one
-          dockerPanels.remove(tab);
           detectDockerAsync(newSession, tab);
         });
+    tabCtrl.setOnSlotConnected(newSession -> detectDockerAsync(newSession, tab));
 
     session.setOnLost(
         lost -> {
@@ -448,12 +447,10 @@ public class MainController {
         e -> {
           tabCtrl.dispose();
           closeDockerForSession(session);
-          // Disconnect off the FX thread — jschSession.disconnect() can block on network I/O
           Thread.ofVirtual()
               .name("ssh-disconnect-" + session.getHost().getName())
               .start(() -> sshService.disconnect(session.getHost().getId()));
           hostListController.updateHostState(session.getHost().getId(), SessionState.DISCONNECTED);
-          dockerPanels.remove(tab);
           updateEmptyState();
         });
     detectDockerAsync(session, tab);
@@ -462,7 +459,29 @@ public class MainController {
 
   // ── Docker panel lifecycle ────────────────────────────────────────────────────
 
-  private void detectDockerAsync(SshSession session, Tab tab) {
+  /** Initialises the single global Docker panel on first use. */
+  private void ensureDockerPanelCreated() {
+    if (dockerPanelController != null) return;
+    try {
+      FXMLLoader loader =
+          new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/docker-panel.fxml"));
+      Parent panel = loader.load();
+      dockerPanelController = loader.getController();
+      dockerPanelController.setOnOpenLogs((c, svc) -> openLogsTab(c, svc));
+      dockerPanelController.setOnOpenExec((c, svc) -> openDockerExecTab(c, svc));
+      dockerPanelController.setOnClose(
+          () -> {
+            dockerPanelEnabled = false;
+            hideDockerPanel();
+          });
+      dockerPanelContainer.getChildren().setAll(panel);
+      log.info("Global Docker panel created");
+    } catch (IOException e) {
+      log.error("Failed to load Docker panel FXML: {}", e.getMessage(), e);
+    }
+  }
+
+  private void detectDockerAsync(SshSession session, Tab ownerTab) {
     Thread.ofVirtual()
         .name("docker-detect-" + session.getHost().getName())
         .start(
@@ -477,43 +496,36 @@ public class MainController {
                   presence.isRootless()
                       ? detector.resolveRootlessSocketPath(session)
                       : presence.getSocketPath();
-              connectDockerAndAttachPanel(session, socketPath, tab);
+              connectDockerAndRegisterHost(session, socketPath, ownerTab);
             });
   }
 
-  private void connectDockerAndAttachPanel(SshSession session, String socketPath, Tab tab) {
+  private void connectDockerAndRegisterHost(SshSession session, String socketPath, Tab ownerTab) {
     DockerService dockerService = new DockerService(tunnelService);
     try {
       dockerService.connect(session, socketPath);
       dockerServices.put(session.getHost().getId(), dockerService);
-      Platform.runLater(() -> attachDockerPanel(tab, dockerService));
+      Platform.runLater(
+          () -> {
+            // Register the host id under its owning tab
+            tabDockerHosts
+                .computeIfAbsent(ownerTab, t -> new java.util.HashSet<>())
+                .add(session.getHost().getId());
+            ensureDockerPanelCreated();
+            dockerPanelController.addHost(
+                session.getHost().getId(),
+                session.getHost().getName(),
+                session.getHost().getHostname(),
+                dockerService);
+            // Only update visible hosts if this tab is currently selected
+            if (sessionTabPane.getSelectionModel().getSelectedItem() == ownerTab) {
+              dockerPanelController.setVisibleHosts(tabDockerHosts.get(ownerTab));
+            }
+            showDockerPanel();
+          });
     } catch (DockerException e) {
       log.warn("Docker connect failed for {}: {}", session.getHost().getName(), e.getMessage());
       dockerService.close();
-    }
-  }
-
-  private void attachDockerPanel(Tab tab, DockerService dockerService) {
-    try {
-      FXMLLoader loader =
-          new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/docker-panel.fxml"));
-      Parent panel = loader.load();
-      DockerPanelController ctrl = loader.getController();
-      ctrl.init(dockerService);
-      ctrl.setOnOpenLogs(c -> openLogsTab(c, dockerService));
-      ctrl.setOnOpenExec(c -> openDockerExecTab(c, dockerService));
-      ctrl.setOnClose(
-          () -> {
-            dockerPanelEnabled = false;
-            hideDockerPanel();
-          });
-      dockerPanels.put(tab, panel);
-      if (sessionTabPane.getSelectionModel().getSelectedItem() == tab) {
-        showDockerPanel(panel);
-      }
-      log.info("Docker panel attached for tab '{}'", tab.getText());
-    } catch (IOException e) {
-      log.error("Failed to load Docker panel FXML: {}", e.getMessage(), e);
     }
   }
 
@@ -540,17 +552,29 @@ public class MainController {
   }
 
   private void onTabSelected(Tab tab) {
-    Parent panel = (tab != null) ? dockerPanels.get(tab) : null;
-    if (panel != null) {
-      showDockerPanel(panel);
-    } else {
+    if (dockerPanelController == null) return;
+    java.util.Set<Long> hosts =
+        tab != null ? tabDockerHosts.getOrDefault(tab, java.util.Set.of()) : java.util.Set.of();
+    dockerPanelController.setVisibleHosts(hosts);
+    if (dockerPanelEnabled && !hosts.isEmpty()) {
+      showDockerPanel();
+    } else if (hosts.isEmpty()) {
       hideDockerPanel();
     }
   }
 
   private void closeDockerForSession(SshSession session) {
-    DockerService ds = dockerServices.remove(session.getHost().getId());
-    if (ds != null) ds.close();
+    long hostId = session.getHost().getId();
+    // Remove this host from all tab mappings
+    tabDockerHosts.values().forEach(ids -> ids.remove(hostId));
+    tabDockerHosts.entrySet().removeIf(e -> e.getValue().isEmpty());
+    DockerService ds = dockerServices.remove(hostId);
+    if (ds != null) {
+      if (dockerPanelController != null) {
+        dockerPanelController.removeHost(hostId);
+      }
+      ds.close();
+    }
   }
 
   // ── UI helpers ────────────────────────────────────────────────────────────────

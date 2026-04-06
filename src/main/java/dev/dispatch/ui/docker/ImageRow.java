@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ImageInfo;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,7 +12,7 @@ import javafx.scene.layout.Priority;
 /** Compact row widget for a Docker image — icon, repository name, tag, and hover remove button. */
 class ImageRow extends HBox {
 
-  ImageRow(ImageInfo image, DockerPanelController panel) {
+  ImageRow(ImageInfo image, DockerService service, DockerPanelController panel) {
     getStyleClass().add("docker-item-row");
     setAlignment(Pos.CENTER_LEFT);
     setPadding(new Insets(5, 12, 5, 14));
@@ -36,7 +37,7 @@ class ImageRow extends HBox {
     removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
     removeBtn.setVisible(false);
     removeBtn.setManaged(false);
-    removeBtn.setOnAction(e -> panel.removeImage(image));
+    removeBtn.setOnAction(e -> panel.removeImage(image, service));
 
     getChildren().addAll(icon, name, tag, removeBtn);
 

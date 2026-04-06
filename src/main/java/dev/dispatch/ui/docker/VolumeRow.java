@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.VolumeInfo;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,7 +12,7 @@ import javafx.scene.layout.Priority;
 /** Compact row widget for a Docker volume — icon, name, driver, and hover remove button. */
 class VolumeRow extends HBox {
 
-  VolumeRow(VolumeInfo volume, DockerPanelController panel) {
+  VolumeRow(VolumeInfo volume, DockerService service, DockerPanelController panel) {
     getStyleClass().add("docker-item-row");
     setAlignment(Pos.CENTER_LEFT);
     setPadding(new Insets(5, 12, 5, 14));
@@ -34,7 +35,7 @@ class VolumeRow extends HBox {
     removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
     removeBtn.setVisible(false);
     removeBtn.setManaged(false);
-    removeBtn.setOnAction(e -> panel.removeVolume(volume));
+    removeBtn.setOnAction(e -> panel.removeVolume(volume, service));
 
     getChildren().addAll(icon, name, driver, removeBtn);
 

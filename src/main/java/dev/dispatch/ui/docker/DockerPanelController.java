@@ -7,23 +7,34 @@ import dev.dispatch.docker.model.ContainerStatus;
 import dev.dispatch.docker.model.ImageInfo;
 import dev.dispatch.docker.model.NetworkInfo;
 import dev.dispatch.docker.model.VolumeInfo;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Controller for the Docker side-panel. Displays containers, images, networks, and volumes as
- * collapsible sections. All Docker operations run on virtual threads.
+ * Controller for the Docker side-panel.
+ *
+ * <p>Manages multiple connected hosts simultaneously. Each section (containers, images, networks,
+ * volumes) groups its rows under a collapsible host sub-header so the user can see at a glance
+ * which resource belongs to which host. Hosts are added via {@link #addHost} when Docker is
+ * detected on a session and removed via {@link #removeHost} when a session is closed.
  */
 public class DockerPanelController {
 
@@ -38,23 +49,31 @@ public class DockerPanelController {
   private final DockerSection networksSection = new DockerSection("NETWORKS");
   private final DockerSection volumesSection = new DockerSection("VOLUMES");
 
-  private DockerService dockerService;
+  /**
+   * Ordered map of host id → entry. LinkedHashMap preserves insertion order so hosts appear in
+   * connection order.
+   */
+  private final Map<Long, HostEntry> hosts = new LinkedHashMap<>();
+
+  /** Subset of hosts currently visible — set by MainController on tab switch. */
+  private java.util.Set<Long> visibleHostIds = java.util.Set.of();
+
   private Runnable onCloseCallback;
-  private Consumer<ContainerInfo> onOpenLogs;
-  private Consumer<ContainerInfo> onOpenExec;
+  private BiConsumer<ContainerInfo, DockerService> onOpenLogs;
+  private BiConsumer<ContainerInfo, DockerService> onOpenExec;
   private Node selectedRow;
 
-  // Snapshot of the last-loaded container list — used for proactive in-use checks.
-  private List<ContainerInfo> currentContainers = List.of();
+  /** Represents one connected host's metadata and Docker service. */
+  private record HostEntry(String name, String hostname, DockerService service) {}
 
-  /** Wires the callback that opens a new log tab in the main layout. */
-  public void setOnOpenLogs(Consumer<ContainerInfo> callback) {
-    this.onOpenLogs = callback;
-  }
+  // ── Init ─────────────────────────────────────────────────────────────────────
 
-  /** Wires the callback that opens a new exec terminal tab in the main layout. */
-  public void setOnOpenExec(Consumer<ContainerInfo> callback) {
-    this.onOpenExec = callback;
+  /** Called by FXML loader — wires sections into the scroll pane content. */
+  @FXML
+  private void initialize() {
+    contentBox
+        .getChildren()
+        .addAll(containersSection, imagesSection, networksSection, volumesSection);
   }
 
   /** Called by MainController to wire the panel's close button back to the main layout. */
@@ -66,31 +85,69 @@ public class DockerPanelController {
         });
   }
 
-  /** Injects the connected {@link DockerService} and loads the initial data. */
-  public void init(DockerService dockerService) {
-    this.dockerService = dockerService;
-    containersSection.setPruneAction(this::pruneContainers);
-    imagesSection.setPruneAction(this::pruneImages);
-    networksSection.setPruneAction(this::pruneNetworks);
-    volumesSection.setPruneAction(this::pruneVolumes);
-    contentBox
-        .getChildren()
-        .addAll(containersSection, imagesSection, networksSection, volumesSection);
+  /** Wires the callback that opens a new log tab in the main layout. */
+  public void setOnOpenLogs(BiConsumer<ContainerInfo, DockerService> callback) {
+    this.onOpenLogs = callback;
+  }
+
+  /** Wires the callback that opens a new exec terminal tab in the main layout. */
+  public void setOnOpenExec(BiConsumer<ContainerInfo, DockerService> callback) {
+    this.onOpenExec = callback;
+  }
+
+  // ── Host lifecycle ────────────────────────────────────────────────────────────
+
+  /**
+   * Registers a host's Docker service. Does not trigger a refresh — call {@link
+   * #setVisibleHosts(java.util.Set)} to update the view. Safe to call from any thread.
+   *
+   * @param hostId unique id of the SSH host
+   * @param hostName display name (e.g. "homelab-01")
+   * @param hostname address shown in the sub-header (e.g. "192.168.1.10")
+   * @param service connected Docker service for this host
+   */
+  public void addHost(long hostId, String hostName, String hostname, DockerService service) {
+    // Must be called on the FX thread — caller (MainController) is already on Platform.runLater
+    hosts.put(hostId, new HostEntry(hostName, hostname, service));
+    log.info("Docker panel: host registered — {} (id={})", hostName, hostId);
+  }
+
+  /**
+   * Removes a host's Docker service registration. Safe to call from any thread.
+   *
+   * @param hostId the host id to remove
+   */
+  public void removeHost(long hostId) {
+    // Must be called on the FX thread — caller (MainController) is already on the FX thread
+    HostEntry removed = hosts.remove(hostId);
+    if (removed != null) {
+      log.info("Docker panel: host removed — {} (id={})", removed.name(), hostId);
+    }
+  }
+
+  /**
+   * Restricts the panel view to the given set of host ids and triggers a refresh. Pass an empty set
+   * to show a "no hosts" state. Must be called on the FX thread.
+   *
+   * <p>Used by {@code MainController} whenever the selected SSH tab changes — so the panel always
+   * reflects exactly the hosts visible in the current tab (one host = no grouping, multiple =
+   * grouped by host).
+   *
+   * @param hostIds ids of hosts to display; hosts not in this set are hidden
+   */
+  public void setVisibleHosts(java.util.Set<Long> hostIds) {
+    visibleHostIds = hostIds;
     refresh();
   }
 
-  // -------------------------------------------------------------------------
-  // FXML handlers
-  // -------------------------------------------------------------------------
+  // ── FXML handlers ─────────────────────────────────────────────────────────────
 
   @FXML
   private void onRefresh() {
     refresh();
   }
 
-  // -------------------------------------------------------------------------
-  // Selection — called by row widgets
-  // -------------------------------------------------------------------------
+  // ── Selection ─────────────────────────────────────────────────────────────────
 
   /** Transfers the visual selection highlight to the given row node. */
   void selectRow(Node row) {
@@ -99,213 +156,251 @@ public class DockerPanelController {
     row.getStyleClass().add("docker-item-selected");
   }
 
-  // -------------------------------------------------------------------------
-  // Package-private actions — called by ContainerRow
-  // -------------------------------------------------------------------------
+  // ── Package-private actions — called by row widgets ───────────────────────────
 
-  void streamLogs(ContainerInfo c) {
-    if (onOpenLogs != null) onOpenLogs.accept(c);
+  void streamLogs(ContainerInfo c, DockerService service) {
+    if (onOpenLogs != null) onOpenLogs.accept(c, service);
     else log.warn("No logs callback registered for {}", c.getName());
   }
 
-  void execContainer(ContainerInfo c) {
-    if (onOpenExec != null) onOpenExec.accept(c);
+  void execContainer(ContainerInfo c, DockerService service) {
+    if (onOpenExec != null) onOpenExec.accept(c, service);
     else log.warn("No exec callback registered for {}", c.getName());
   }
 
-  void startContainer(ContainerInfo c) {
-    runContainerOp(() -> dockerService.startContainer(c.getId()), "Starting " + c.getName(), c);
+  void startContainer(ContainerInfo c, DockerService service) {
+    runContainerOp(() -> service.startContainer(c.getId()), "Starting " + c.getName(), c);
   }
 
-  void stopContainer(ContainerInfo c) {
-    runContainerOp(() -> dockerService.stopContainer(c.getId()), "Stopping " + c.getName(), c);
+  void stopContainer(ContainerInfo c, DockerService service) {
+    runContainerOp(() -> service.stopContainer(c.getId()), "Stopping " + c.getName(), c);
   }
 
-  void removeContainer(ContainerInfo c) {
+  void removeContainer(ContainerInfo c, DockerService service) {
     if (!confirm(
         "Remove container", "Remove container \"" + c.getName() + "\"?\nThis cannot be undone."))
       return;
-    runContainerOp(() -> dockerService.removeContainer(c.getId()), "Removing " + c.getName(), c);
+    runContainerOp(() -> service.removeContainer(c.getId()), "Removing " + c.getName(), c);
   }
 
-  void removeImage(ImageInfo img) {
+  void removeImage(ImageInfo img, DockerService service) {
     String label = img.getPrimaryTag().equals("<none>") ? img.getShortId() : img.getPrimaryTag();
-    String usingContainer = findContainerUsingImage(img);
-    if (usingContainer != null) {
-      showInUse("image \"" + label + "\"", "container \"" + usingContainer + "\"");
-      return;
-    }
     if (!confirm("Remove image", "Remove image \"" + label + "\"?\nThis cannot be undone.")) return;
-    runDockerOp(() -> dockerService.removeImage(img.getId()), "Removing image " + label);
+    runDockerOp(() -> service.removeImage(img.getId()), "Removing image " + label);
   }
 
-  void removeNetwork(NetworkInfo n) {
+  void removeNetwork(NetworkInfo n, DockerService service) {
     if (!confirm(
         "Remove network", "Remove network \"" + n.getName() + "\"?\nThis cannot be undone."))
       return;
-    runDockerOp(() -> dockerService.removeNetwork(n.getId()), "Removing network " + n.getName());
+    runDockerOp(() -> service.removeNetwork(n.getId()), "Removing network " + n.getName());
   }
 
-  void removeVolume(VolumeInfo v) {
+  void removeVolume(VolumeInfo v, DockerService service) {
     if (!confirm("Remove volume", "Remove volume \"" + v.getName() + "\"?\nThis cannot be undone."))
       return;
-    runDockerOp(() -> dockerService.removeVolume(v.getName()), "Removing volume " + v.getName());
+    runDockerOp(() -> service.removeVolume(v.getName()), "Removing volume " + v.getName());
   }
 
-  // -------------------------------------------------------------------------
-  // Package-private prune actions — called by DockerSection prune buttons
-  // -------------------------------------------------------------------------
+  // ── Refresh ───────────────────────────────────────────────────────────────────
 
-  private void pruneContainers() {
+  private void refresh() {
+    setStatus("Loading…");
+    // Filter to only the hosts visible in the current tab, then snapshot
+    Map<Long, HostEntry> snapshot = new LinkedHashMap<>();
+    for (Map.Entry<Long, HostEntry> e : hosts.entrySet()) {
+      if (visibleHostIds.contains(e.getKey())) snapshot.put(e.getKey(), e.getValue());
+    }
+    if (snapshot.isEmpty()) {
+      clearAllSections();
+      setStatus("No hosts connected");
+      return;
+    }
+    Thread.ofVirtual().name("docker-refresh-all").start(() -> fetchAndPopulate(snapshot));
+  }
+
+  private void fetchAndPopulate(Map<Long, HostEntry> snapshot) {
+    // Fetch data for all hosts; collect results then update UI once
+    Map<Long, HostData> results = new LinkedHashMap<>();
+    int totalContainers = 0;
+    int totalImages = 0;
+
+    for (Map.Entry<Long, HostEntry> e : snapshot.entrySet()) {
+      long hostId = e.getKey();
+      HostEntry entry = e.getValue();
+      try {
+        List<ContainerInfo> containers = entry.service().listContainers();
+        List<ImageInfo> images = entry.service().listImages();
+        List<NetworkInfo> networks = entry.service().listNetworks();
+        List<VolumeInfo> volumes = entry.service().listVolumes();
+        results.put(hostId, new HostData(entry, containers, images, networks, volumes));
+        totalContainers += containers.size();
+        totalImages += images.size();
+        log.debug(
+            "Fetched Docker data from {}: {} containers, {} images",
+            entry.name(),
+            containers.size(),
+            images.size());
+      } catch (DockerException ex) {
+        log.error("Docker refresh failed for {}: {}", entry.name(), ex.getMessage(), ex);
+        results.put(hostId, new HostData(entry, List.of(), List.of(), List.of(), List.of()));
+      }
+    }
+
+    int finalContainers = totalContainers;
+    int finalImages = totalImages;
+    Platform.runLater(
+        () -> {
+          populateAllSections(results);
+          setStatus(finalContainers + " containers · " + finalImages + " images");
+        });
+  }
+
+  private void populateAllSections(Map<Long, HostData> results) {
+    boolean multiHost = results.size() > 1;
+
+    clearAllSections();
+
+    long totalRunning = 0;
+    int totalImages = 0;
+    int totalNetworks = 0;
+    int totalVolumes = 0;
+
+    for (HostData data : results.values()) {
+      long running =
+          data.containers().stream().filter(c -> c.getStatus() == ContainerStatus.RUNNING).count();
+      totalRunning += running;
+      totalImages += data.images().size();
+      totalNetworks += data.networks().size();
+      totalVolumes += data.volumes().size();
+
+      VBox containerItems = containersSection.getItemsBox();
+      VBox imageItems = imagesSection.getItemsBox();
+      VBox networkItems = networksSection.getItemsBox();
+      VBox volumeItems = volumesSection.getItemsBox();
+
+      if (multiHost) {
+        containerItems
+            .getChildren()
+            .add(buildHostHeader(data.entry(), () -> pruneContainers(data.entry().service())));
+        imageItems
+            .getChildren()
+            .add(buildHostHeader(data.entry(), () -> pruneImages(data.entry().service())));
+        networkItems
+            .getChildren()
+            .add(buildHostHeader(data.entry(), () -> pruneNetworks(data.entry().service())));
+        volumeItems
+            .getChildren()
+            .add(buildHostHeader(data.entry(), () -> pruneVolumes(data.entry().service())));
+      }
+
+      data.containers()
+          .forEach(
+              c ->
+                  containerItems
+                      .getChildren()
+                      .add(new ContainerRow(c, data.entry().service(), this)));
+      data.images()
+          .forEach(
+              img -> imageItems.getChildren().add(new ImageRow(img, data.entry().service(), this)));
+      data.networks()
+          .forEach(
+              n -> networkItems.getChildren().add(new NetworkRow(n, data.entry().service(), this)));
+      data.volumes()
+          .forEach(
+              v -> volumeItems.getChildren().add(new VolumeRow(v, data.entry().service(), this)));
+    }
+
+    // Single-host: keep prune buttons on section headers
+    if (!multiHost) {
+      results.values().stream()
+          .findFirst()
+          .ifPresent(
+              data -> {
+                containersSection.setPruneAction(() -> pruneContainers(data.entry().service()));
+                imagesSection.setPruneAction(() -> pruneImages(data.entry().service()));
+                networksSection.setPruneAction(() -> pruneNetworks(data.entry().service()));
+                volumesSection.setPruneAction(() -> pruneVolumes(data.entry().service()));
+              });
+    } else {
+      containersSection.clearPruneAction();
+      imagesSection.clearPruneAction();
+      networksSection.clearPruneAction();
+      volumesSection.clearPruneAction();
+    }
+
+    containersSection.setBadgeText(totalRunning + " running");
+    imagesSection.setCount(totalImages);
+    networksSection.setCount(totalNetworks);
+    volumesSection.setCount(totalVolumes);
+  }
+
+  private void clearAllSections() {
+    containersSection.getItemsBox().getChildren().clear();
+    imagesSection.getItemsBox().getChildren().clear();
+    networksSection.getItemsBox().getChildren().clear();
+    volumesSection.getItemsBox().getChildren().clear();
+  }
+
+  // ── Host sub-header ───────────────────────────────────────────────────────────
+
+  /**
+   * Builds a collapsible sub-header label for one host inside a section. Shown only when multiple
+   * hosts are connected.
+   */
+  private HBox buildHostHeader(HostEntry entry, Runnable pruneAction) {
+    Label arrow = new Label("▾");
+    arrow.getStyleClass().add("docker-host-arrow");
+
+    Label name = new Label(entry.name());
+    name.getStyleClass().add("docker-host-name");
+
+    Label addr = new Label(entry.hostname());
+    addr.getStyleClass().add("docker-host-addr");
+
+    Button pruneBtn = new Button("Prune");
+    pruneBtn.getStyleClass().add("docker-section-prune-btn");
+    pruneBtn.setOnAction(e -> pruneAction.run());
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox header = new HBox(6, arrow, name, addr, spacer, pruneBtn);
+    header.setAlignment(Pos.CENTER_LEFT);
+    header.getStyleClass().add("docker-host-header");
+    header.setPadding(new Insets(5, 10, 5, 8));
+    return header;
+  }
+
+  // ── Prune actions ─────────────────────────────────────────────────────────────
+
+  private void pruneContainers(DockerService service) {
     if (!confirm("Prune containers", "Remove all stopped containers?\nThis cannot be undone."))
       return;
-    runDockerOpWithResult(dockerService::pruneContainers, "Pruning containers");
+    runDockerOpWithResult(service::pruneContainers, "Pruning containers");
   }
 
-  private void pruneImages() {
+  private void pruneImages(DockerService service) {
     if (!confirm(
         "Prune images",
         "Remove all unused images (not referenced by any container)?\nThis cannot be undone."))
       return;
-    runDockerOpWithResult(dockerService::pruneImages, "Pruning images");
+    runDockerOpWithResult(service::pruneImages, "Pruning images");
   }
 
-  private void pruneNetworks() {
+  private void pruneNetworks(DockerService service) {
     if (!confirm("Prune networks", "Remove all unused networks?\nThis cannot be undone.")) return;
-    runDockerOpWithResult(dockerService::pruneNetworks, "Pruning networks");
+    runDockerOpWithResult(service::pruneNetworks, "Pruning networks");
   }
 
-  private void pruneVolumes() {
+  private void pruneVolumes(DockerService service) {
     if (!confirm("Prune volumes", "Remove all unused volumes?\nData will be permanently deleted."))
       return;
-    runDockerOpWithResult(dockerService::pruneVolumes, "Pruning volumes");
+    runDockerOpWithResult(service::pruneVolumes, "Pruning volumes");
   }
 
-  // -------------------------------------------------------------------------
-  // Private helpers
-  // -------------------------------------------------------------------------
+  // ── Operation helpers ─────────────────────────────────────────────────────────
 
-  private void refresh() {
-    setStatus("Loading…");
-    Thread.ofVirtual()
-        .name("docker-refresh")
-        .start(
-            () -> {
-              try {
-                List<ContainerInfo> containers = dockerService.listContainers();
-                List<ImageInfo> images = dockerService.listImages();
-                List<NetworkInfo> networks = dockerService.listNetworks();
-                List<VolumeInfo> volumes = dockerService.listVolumes();
-                Platform.runLater(
-                    () -> {
-                      populateContainers(containers);
-                      populateImages(images);
-                      populateNetworks(networks);
-                      populateVolumes(volumes);
-                      setStatus(containers.size() + " containers · " + images.size() + " images");
-                      log.debug(
-                          "Docker panel refreshed: {} containers, {} images, {} networks, {} volumes",
-                          containers.size(),
-                          images.size(),
-                          networks.size(),
-                          volumes.size());
-                    });
-              } catch (DockerException e) {
-                log.error("Docker panel refresh failed: {}", e.getMessage(), e);
-                Platform.runLater(() -> setStatus("Error: " + e.getMessage()));
-              }
-            });
-  }
-
-  private void populateContainers(List<ContainerInfo> containers) {
-    currentContainers = containers;
-    long running =
-        containers.stream().filter(c -> c.getStatus() == ContainerStatus.RUNNING).count();
-    containersSection.setBadgeText(running + " running");
-    VBox items = containersSection.getItemsBox();
-    items.getChildren().clear();
-    containers.forEach(c -> items.getChildren().add(new ContainerRow(c, this)));
-  }
-
-  private void populateImages(List<ImageInfo> images) {
-    imagesSection.setCount(images.size());
-    VBox items = imagesSection.getItemsBox();
-    items.getChildren().clear();
-    images.forEach(img -> items.getChildren().add(new ImageRow(img, this)));
-  }
-
-  private void populateNetworks(List<NetworkInfo> networks) {
-    networksSection.setCount(networks.size());
-    VBox items = networksSection.getItemsBox();
-    items.getChildren().clear();
-    networks.forEach(n -> items.getChildren().add(new NetworkRow(n, this)));
-  }
-
-  private void populateVolumes(List<VolumeInfo> volumes) {
-    volumesSection.setCount(volumes.size());
-    VBox items = volumesSection.getItemsBox();
-    items.getChildren().clear();
-    volumes.forEach(v -> items.getChildren().add(new VolumeRow(v, this)));
-  }
-
-  /**
-   * Returns the name of the first container that references the given image, or {@code null} if
-   * none. Matches by primary tag (e.g. {@code "nginx:latest"}).
-   */
-  private String findContainerUsingImage(ImageInfo img) {
-    return currentContainers.stream()
-        .filter(c -> c.getImage().equals(img.getPrimaryTag()))
-        .map(ContainerInfo::getName)
-        .findFirst()
-        .orElse(null);
-  }
-
-  /**
-   * Shows a blocking info dialog explaining that a resource cannot be removed because it is in use.
-   * Must be called from the FX Application Thread.
-   */
-  private void showInUse(String resource, String usedBy) {
-    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-    alert.setTitle("Cannot remove");
-    alert.setHeaderText(null);
-    alert.setContentText(
-        "Cannot remove " + resource + " — it is currently in use by " + usedBy + ".");
-    alert.showAndWait();
-  }
-
-  /**
-   * Shows a confirmation dialog on the FX thread and returns {@code true} if the user clicked OK.
-   * Must be called from the FX Application Thread.
-   */
-  private boolean confirm(String title, String body) {
-    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-    alert.setTitle(title);
-    alert.setHeaderText(null);
-    alert.setContentText(body);
-    Optional<ButtonType> result = alert.showAndWait();
-    return result.isPresent() && result.get() == ButtonType.OK;
-  }
-
-  /**
-   * Shows an error dialog explaining why the operation could not be completed. Must be called from
-   * the FX Application Thread.
-   */
-  private void showError(String title, String message) {
-    Alert alert = new Alert(Alert.AlertType.ERROR);
-    alert.setTitle(title);
-    alert.setHeaderText(null);
-    alert.setContentText(message);
-    alert.showAndWait();
-  }
-
-  /**
-   * Runs a generic Docker operation (image / network / volume) on a virtual thread and refreshes
-   * the panel when done. Does not require a {@link ContainerInfo} — use for non-container ops.
-   */
-  /**
-   * Runs a Docker operation that returns a summary string (used for prune commands). Refreshes the
-   * panel and shows the summary in the status bar when done.
-   */
   private void runDockerOpWithResult(java.util.function.Supplier<String> op, String description) {
     setStatus(description + "…");
     Thread.ofVirtual()
@@ -377,13 +472,25 @@ public class DockerPanelController {
             });
   }
 
-  /**
-   * Extracts a concise, user-readable reason from a {@link DockerException}.
-   *
-   * <p>docker-java wraps the Docker daemon's error as the cause exception whose message is the
-   * plain-text daemon response (e.g. "remove nginx_volume: volume is in use - [abc123]"). We prefer
-   * the cause message; if absent we fall back to the outer exception message.
-   */
+  // ── UI helpers ────────────────────────────────────────────────────────────────
+
+  private boolean confirm(String title, String body) {
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+    alert.setTitle(title);
+    alert.setHeaderText(null);
+    alert.setContentText(body);
+    Optional<ButtonType> result = alert.showAndWait();
+    return result.isPresent() && result.get() == ButtonType.OK;
+  }
+
+  private void showError(String title, String message) {
+    Alert alert = new Alert(Alert.AlertType.ERROR);
+    alert.setTitle(title);
+    alert.setHeaderText(null);
+    alert.setContentText(message);
+    alert.showAndWait();
+  }
+
   private static String extractReason(DockerException e) {
     Throwable cause = e.getCause();
     if (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank()) {
@@ -396,4 +503,13 @@ public class DockerPanelController {
   private void setStatus(String text) {
     statusLabel.setText(text);
   }
+
+  // ── Internal data holder ──────────────────────────────────────────────────────
+
+  private record HostData(
+      HostEntry entry,
+      List<ContainerInfo> containers,
+      List<ImageInfo> images,
+      List<NetworkInfo> networks,
+      List<VolumeInfo> volumes) {}
 }

@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import dev.dispatch.docker.model.ContainerStatus;
 import javafx.geometry.Insets;
@@ -18,7 +19,7 @@ import javafx.scene.layout.Region;
  */
 class ContainerRow extends HBox {
 
-  ContainerRow(ContainerInfo container, DockerPanelController panel) {
+  ContainerRow(ContainerInfo container, DockerService service, DockerPanelController panel) {
     getStyleClass().add("docker-item-row");
     setAlignment(Pos.CENTER_LEFT);
     setPadding(new Insets(5, 10, 5, 14));
@@ -39,7 +40,7 @@ class ContainerRow extends HBox {
     Label uptime = new Label(formatUptime(container));
     uptime.getStyleClass().add("docker-item-meta");
 
-    HBox actions = buildActions(container, panel);
+    HBox actions = buildActions(container, service, panel);
     actions.setVisible(false);
     actions.setManaged(false);
 
@@ -76,25 +77,26 @@ class ContainerRow extends HBox {
     return dot;
   }
 
-  private static HBox buildActions(ContainerInfo container, DockerPanelController panel) {
+  private static HBox buildActions(
+      ContainerInfo container, DockerService service, DockerPanelController panel) {
     boolean running = container.getStatus() == ContainerStatus.RUNNING;
 
     Button logsBtn = new Button("≡");
     logsBtn.getStyleClass().addAll("docker-action-btn", "docker-action-logs");
-    logsBtn.setOnAction(e -> panel.streamLogs(container));
+    logsBtn.setOnAction(e -> panel.streamLogs(container, service));
 
     Button execBtn = new Button(">_");
     execBtn.getStyleClass().addAll("docker-action-btn", "docker-action-exec");
     execBtn.setDisable(!running);
-    execBtn.setOnAction(e -> panel.execContainer(container));
+    execBtn.setOnAction(e -> panel.execContainer(container, service));
 
-    Button toggleBtn = buildToggleButton(container, panel, running);
+    Button toggleBtn = buildToggleButton(container, service, panel, running);
 
     Button removeBtn = new Button("✕");
     removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
     // Removing a running container is destructive — disable it; user must stop first.
     removeBtn.setDisable(running);
-    removeBtn.setOnAction(e -> panel.removeContainer(container));
+    removeBtn.setOnAction(e -> panel.removeContainer(container, service));
 
     HBox box = new HBox(4, logsBtn, execBtn, toggleBtn, removeBtn);
     box.setAlignment(Pos.CENTER_RIGHT);
@@ -102,14 +104,17 @@ class ContainerRow extends HBox {
   }
 
   private static Button buildToggleButton(
-      ContainerInfo container, DockerPanelController panel, boolean running) {
+      ContainerInfo container,
+      DockerService service,
+      DockerPanelController panel,
+      boolean running) {
     Button btn = new Button(running ? "■" : "▶");
     btn.getStyleClass()
         .addAll("docker-action-btn", running ? "docker-action-stop" : "docker-action-start");
     btn.setOnAction(
         e -> {
-          if (running) panel.stopContainer(container);
-          else panel.startContainer(container);
+          if (running) panel.stopContainer(container, service);
+          else panel.startContainer(container, service);
         });
     return btn;
   }

@@ -60,6 +60,9 @@ public class SshTabController {
 
   private Consumer<SshSession> onReconnected;
 
+  /** Fired on the FX thread each time a secondary slot successfully connects to a new host. */
+  private Consumer<SshSession> onSlotConnected;
+
   /**
    * Creates a controller for a newly connected session.
    *
@@ -88,6 +91,14 @@ public class SshTabController {
    */
   public void setOnReconnected(Consumer<SshSession> onReconnected) {
     this.onReconnected = onReconnected;
+  }
+
+  /**
+   * Registers a callback invoked on the FX thread whenever a secondary split-pane slot connects to
+   * a new host. Used by {@code MainController} to trigger Docker detection for that session.
+   */
+  public void setOnSlotConnected(Consumer<SshSession> onSlotConnected) {
+    this.onSlotConnected = onSlotConnected;
   }
 
   /**
@@ -294,6 +305,7 @@ public class SshTabController {
                     () -> {
                       activateSlot(slotIndex, newSession);
                       distributeEqually();
+                      if (onSlotConnected != null) onSlotConnected.accept(newSession);
                     });
                 log.info("Split pane slot {} connected to {}", slotIndex, host.getName());
               } catch (SshException e) {

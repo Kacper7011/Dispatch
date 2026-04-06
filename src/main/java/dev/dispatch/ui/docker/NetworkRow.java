@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.NetworkInfo;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,7 +12,7 @@ import javafx.scene.layout.Priority;
 /** Compact row widget for a Docker network — icon, name, driver, and hover remove button. */
 class NetworkRow extends HBox {
 
-  NetworkRow(NetworkInfo network, DockerPanelController panel) {
+  NetworkRow(NetworkInfo network, DockerService service, DockerPanelController panel) {
     getStyleClass().add("docker-item-row");
     setAlignment(Pos.CENTER_LEFT);
     setPadding(new Insets(5, 12, 5, 14));
@@ -34,7 +35,7 @@ class NetworkRow extends HBox {
     removeBtn.getStyleClass().addAll("docker-action-btn", "docker-action-remove");
     removeBtn.setVisible(false);
     removeBtn.setManaged(false);
-    removeBtn.setOnAction(e -> panel.removeNetwork(network));
+    removeBtn.setOnAction(e -> panel.removeNetwork(network, service));
 
     getChildren().addAll(icon, name, driver, removeBtn);
 
