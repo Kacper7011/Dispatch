@@ -1,9 +1,9 @@
 package dev.dispatch.storage;
 
+import dev.dispatch.core.config.AppConfig;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -20,8 +20,6 @@ import org.slf4j.LoggerFactory;
 public class DatabaseManager implements AutoCloseable {
 
   private static final Logger log = LoggerFactory.getLogger(DatabaseManager.class);
-  private static final String DB_DIR = ".dispatch";
-  private static final String DB_FILE = "dispatch.db";
 
   private final Connection connection;
 
@@ -37,7 +35,7 @@ public class DatabaseManager implements AutoCloseable {
   }
 
   private static Path resolveDefaultDbPath() {
-    return Paths.get(System.getProperty("user.home"), DB_DIR, DB_FILE);
+    return AppConfig.dbPath();
   }
 
   private Connection openConnection(Path dbPath) {

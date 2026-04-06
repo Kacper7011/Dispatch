@@ -1,6 +1,7 @@
 package dev.dispatch;
 
 import atlantafx.base.theme.NordDark;
+import dev.dispatch.core.config.AppConfig;
 import dev.dispatch.ssh.SshService;
 import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.storage.DatabaseManager;
@@ -43,7 +44,8 @@ public class App extends Application {
     stage.initStyle(isMac ? StageStyle.DECORATED : StageStyle.TRANSPARENT);
 
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
-    Scene scene = new Scene(loader.load(), 1280, 800);
+    Scene scene =
+        new Scene(loader.load(), AppConfig.WINDOW_DEFAULT_WIDTH, AppConfig.WINDOW_DEFAULT_HEIGHT);
     scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
 
     if (isMac) {

@@ -1,5 +1,6 @@
 package dev.dispatch.ui.docker;
 
+import dev.dispatch.core.config.AppConfig;
 import dev.dispatch.docker.DockerService;
 import dev.dispatch.docker.model.ContainerInfo;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -37,7 +38,7 @@ public class ContainerLogsController {
   private static final int FLUSH_INTERVAL_MS = 100;
 
   /** Maximum number of lines kept — oldest lines are trimmed from the top. */
-  private static final int MAX_LINES = 5_000;
+  private static final int MAX_LINES = AppConfig.DOCKER_LOG_MAX_LINES;
 
   private final DockerService dockerService;
   private final ContainerInfo container;

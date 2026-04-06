@@ -1,5 +1,6 @@
 package dev.dispatch.ui;
 
+import dev.dispatch.core.config.AppConfig;
 import dev.dispatch.core.model.Host;
 import dev.dispatch.docker.DockerDetector;
 import dev.dispatch.docker.DockerException;
@@ -319,24 +320,24 @@ public class MainController {
     if (activeCursor == Cursor.E_RESIZE
         || activeCursor == Cursor.NE_RESIZE
         || activeCursor == Cursor.SE_RESIZE) {
-      stage.setWidth(Math.max(700, resizeStartW + dx));
+      stage.setWidth(Math.max(AppConfig.WINDOW_MIN_WIDTH, resizeStartW + dx));
     }
     if (activeCursor == Cursor.W_RESIZE
         || activeCursor == Cursor.NW_RESIZE
         || activeCursor == Cursor.SW_RESIZE) {
-      double newW = Math.max(700, resizeStartW - dx);
+      double newW = Math.max(AppConfig.WINDOW_MIN_WIDTH, resizeStartW - dx);
       stage.setX(resizeStartSX + resizeStartW - newW);
       stage.setWidth(newW);
     }
     if (activeCursor == Cursor.S_RESIZE
         || activeCursor == Cursor.SE_RESIZE
         || activeCursor == Cursor.SW_RESIZE) {
-      stage.setHeight(Math.max(480, resizeStartH + dy));
+      stage.setHeight(Math.max(AppConfig.WINDOW_MIN_HEIGHT, resizeStartH + dy));
     }
     if (activeCursor == Cursor.N_RESIZE
         || activeCursor == Cursor.NE_RESIZE
         || activeCursor == Cursor.NW_RESIZE) {
-      double newH = Math.max(480, resizeStartH - dy);
+      double newH = Math.max(AppConfig.WINDOW_MIN_HEIGHT, resizeStartH - dy);
       stage.setY(resizeStartSY + resizeStartH - newH);
       stage.setHeight(newH);
     }
