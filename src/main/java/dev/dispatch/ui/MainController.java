@@ -12,13 +12,14 @@ import dev.dispatch.ssh.SshException;
 import dev.dispatch.ssh.SshService;
 import dev.dispatch.ssh.SshSession;
 import dev.dispatch.ssh.TunnelService;
-import dev.dispatch.ssh.terminal.TerminalController;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
+import dev.dispatch.storage.SessionRepository;
 import dev.dispatch.ui.docker.ContainerLogsController;
 import dev.dispatch.ui.docker.DockerExecController;
 import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.host.HostListController;
+import dev.dispatch.ui.ssh.SshTabController;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -76,6 +77,7 @@ public class MainController {
   private SshService sshService;
   private TunnelService tunnelService;
   private HostRepository hostRepository;
+  private SessionRepository sessionRepository;
   private final Map<Long, DockerService> dockerServices = new ConcurrentHashMap<>();
 
   // ── Docker panel state ───────────────────────────────────────────────────────
@@ -104,6 +106,7 @@ public class MainController {
     this.tunnelService = tunnelService;
 
     this.hostRepository = new HostRepository(dbManager);
+    this.sessionRepository = new SessionRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
 
@@ -396,7 +399,6 @@ public class MainController {
                   sshService.disconnect(host.getId());
                   return;
                 }
-                session.setOnLost(lost -> Platform.runLater(() -> onSessionLost(lost)));
                 // Remember that this key has no passphrase so future connections skip the dialog
                 if (!credentials.hasPassphrase()
                     && credentials.getPassword() == null
@@ -406,7 +408,7 @@ public class MainController {
                 Platform.runLater(
                     () -> {
                       hostListController.updateHostState(host.getId(), SessionState.CONNECTED);
-                      openSessionTab(loadingTab, session);
+                      openSessionTab(loadingTab, session, credentials);
                     });
               } catch (SshException e) {
                 if (!cancelled.get()) {
@@ -417,13 +419,33 @@ public class MainController {
             });
   }
 
-  private void openSessionTab(Tab tab, SshSession session) {
-    TerminalController terminal = new TerminalController(session);
+  private void openSessionTab(Tab tab, SshSession session, SshCredentials credentials) {
+    SshTabController tabCtrl =
+        new SshTabController(session, credentials, sshService, sessionRepository);
+    tabCtrl.setOnReconnected(
+        newSession -> {
+          tab.setText(newSession.getHost().getName());
+          hostListController.updateHostState(newSession.getHost().getId(), SessionState.CONNECTED);
+          // Drop stale Docker panel so detectDockerAsync can attach a fresh one
+          dockerPanels.remove(tab);
+          detectDockerAsync(newSession, tab);
+        });
+
+    session.setOnLost(
+        lost -> {
+          tabCtrl.onSessionLost();
+          Platform.runLater(
+              () -> {
+                tab.setText("⚠ " + lost.getHost().getName());
+                hostListController.updateHostState(lost.getHost().getId(), SessionState.LOST);
+              });
+        });
+
     tab.setText(session.getHost().getName());
-    tab.setContent(terminal.createNode());
+    tab.setContent(tabCtrl.createNode());
     tab.setOnClosed(
         e -> {
-          terminal.dispose();
+          tabCtrl.dispose();
           closeDockerForSession(session);
           // Disconnect off the FX thread — jschSession.disconnect() can block on network I/O
           Thread.ofVirtual()
@@ -531,15 +553,6 @@ public class MainController {
   }
 
   // ── UI helpers ────────────────────────────────────────────────────────────────
-
-  private void onSessionLost(SshSession session) {
-    sessionTabPane.getTabs().stream()
-        .filter(t -> t.getText().equals(session.getHost().getName()))
-        .findFirst()
-        .ifPresent(t -> t.setText("⚠ " + session.getHost().getName()));
-    hostListController.updateHostState(session.getHost().getId(), SessionState.LOST);
-    log.warn("Session lost: {}", session.getHost().getName());
-  }
 
   private Tab createLoadingTab(Host host) {
     Tab tab = new Tab("Connecting… " + host.getName());

@@ -230,6 +230,19 @@ public class SshSession {
     this.onLostCallback = callback;
   }
 
+  /**
+   * Transitions to {@link SessionState#LOST} and fires the onLost callback. Called by the terminal
+   * bridge when the SSH output stream ends unexpectedly.
+   */
+  public void markAsLost() {
+    if (state == SessionState.CONNECTED) {
+      transitionTo(SessionState.LOST);
+      if (onLostCallback != null) {
+        onLostCallback.accept(this);
+      }
+    }
+  }
+
   public SessionState getState() {
     return state;
   }

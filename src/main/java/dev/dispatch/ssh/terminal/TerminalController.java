@@ -191,6 +191,7 @@ public class TerminalController {
                 InputStream stdout = (InputStream) shell[1];
                 OutputStream stdin = (OutputStream) shell[2];
                 bridge = new SshTerminalBridge(engine, channel, stdout, stdin);
+                bridge.setOnConnectionLost(session::markAsLost);
                 bridge.start();
                 log.info("Terminal ready for {}", session.getHost().getName());
               } catch (Exception e) {
