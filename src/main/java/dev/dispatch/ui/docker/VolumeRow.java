@@ -38,8 +38,20 @@ class VolumeRow extends HBox {
 
     getChildren().addAll(icon, name, driver, removeBtn);
 
-    setOnMouseEntered(e -> { removeBtn.setVisible(true); removeBtn.setManaged(true); driver.setVisible(false); driver.setManaged(false); });
-    setOnMouseExited(e -> { removeBtn.setVisible(false); removeBtn.setManaged(false); driver.setVisible(true); driver.setManaged(true); });
+    setOnMouseEntered(
+        e -> {
+          removeBtn.setVisible(true);
+          removeBtn.setManaged(true);
+          driver.setVisible(false);
+          driver.setManaged(false);
+        });
+    setOnMouseExited(
+        e -> {
+          removeBtn.setVisible(false);
+          removeBtn.setManaged(false);
+          driver.setVisible(true);
+          driver.setManaged(true);
+        });
     setOnMouseClicked(e -> panel.selectRow(this));
   }
 }

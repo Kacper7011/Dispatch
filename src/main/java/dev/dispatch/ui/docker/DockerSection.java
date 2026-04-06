@@ -46,7 +46,10 @@ class DockerSection extends VBox {
     header.setAlignment(Pos.CENTER_LEFT);
     header.setPadding(new Insets(7, 10, 7, 10));
     // Collapse toggle only fires when clicking outside the prune button
-    header.setOnMouseClicked(e -> { if (!pruneBtn.isHover()) toggleCollapse(); });
+    header.setOnMouseClicked(
+        e -> {
+          if (!pruneBtn.isHover()) toggleCollapse();
+        });
 
     itemsBox.getStyleClass().add("docker-section-items");
 

@@ -122,7 +122,9 @@ public class DockerPanelController {
   }
 
   void removeContainer(ContainerInfo c) {
-    if (!confirm("Remove container", "Remove container \"" + c.getName() + "\"?\nThis cannot be undone.")) return;
+    if (!confirm(
+        "Remove container", "Remove container \"" + c.getName() + "\"?\nThis cannot be undone."))
+      return;
     runContainerOp(() -> dockerService.removeContainer(c.getId()), "Removing " + c.getName(), c);
   }
 
@@ -138,12 +140,15 @@ public class DockerPanelController {
   }
 
   void removeNetwork(NetworkInfo n) {
-    if (!confirm("Remove network", "Remove network \"" + n.getName() + "\"?\nThis cannot be undone.")) return;
+    if (!confirm(
+        "Remove network", "Remove network \"" + n.getName() + "\"?\nThis cannot be undone."))
+      return;
     runDockerOp(() -> dockerService.removeNetwork(n.getId()), "Removing network " + n.getName());
   }
 
   void removeVolume(VolumeInfo v) {
-    if (!confirm("Remove volume", "Remove volume \"" + v.getName() + "\"?\nThis cannot be undone.")) return;
+    if (!confirm("Remove volume", "Remove volume \"" + v.getName() + "\"?\nThis cannot be undone."))
+      return;
     runDockerOp(() -> dockerService.removeVolume(v.getName()), "Removing volume " + v.getName());
   }
 
@@ -152,12 +157,16 @@ public class DockerPanelController {
   // -------------------------------------------------------------------------
 
   private void pruneContainers() {
-    if (!confirm("Prune containers", "Remove all stopped containers?\nThis cannot be undone.")) return;
+    if (!confirm("Prune containers", "Remove all stopped containers?\nThis cannot be undone."))
+      return;
     runDockerOpWithResult(dockerService::pruneContainers, "Pruning containers");
   }
 
   private void pruneImages() {
-    if (!confirm("Prune images", "Remove all unused images (not referenced by any container)?\nThis cannot be undone.")) return;
+    if (!confirm(
+        "Prune images",
+        "Remove all unused images (not referenced by any container)?\nThis cannot be undone."))
+      return;
     runDockerOpWithResult(dockerService::pruneImages, "Pruning images");
   }
 
@@ -167,7 +176,8 @@ public class DockerPanelController {
   }
 
   private void pruneVolumes() {
-    if (!confirm("Prune volumes", "Remove all unused volumes?\nData will be permanently deleted.")) return;
+    if (!confirm("Prune volumes", "Remove all unused volumes?\nData will be permanently deleted."))
+      return;
     runDockerOpWithResult(dockerService::pruneVolumes, "Pruning volumes");
   }
 
@@ -258,7 +268,8 @@ public class DockerPanelController {
     Alert alert = new Alert(Alert.AlertType.INFORMATION);
     alert.setTitle("Cannot remove");
     alert.setHeaderText(null);
-    alert.setContentText("Cannot remove " + resource + " — it is currently in use by " + usedBy + ".");
+    alert.setContentText(
+        "Cannot remove " + resource + " — it is currently in use by " + usedBy + ".");
     alert.showAndWait();
   }
 
@@ -276,8 +287,8 @@ public class DockerPanelController {
   }
 
   /**
-   * Shows an error dialog explaining why the operation could not be completed.
-   * Must be called from the FX Application Thread.
+   * Shows an error dialog explaining why the operation could not be completed. Must be called from
+   * the FX Application Thread.
    */
   private void showError(String title, String message) {
     Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -304,13 +315,15 @@ public class DockerPanelController {
               try {
                 String result = op.get();
                 log.info("{} — {}", description, result);
-                Platform.runLater(() -> {
-                  refresh();
-                  setStatus(result);
-                });
+                Platform.runLater(
+                    () -> {
+                      refresh();
+                      setStatus(result);
+                    });
               } catch (Exception e) {
                 log.error("{} failed: {}", description, e.getMessage(), e);
-                String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                String reason =
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 Platform.runLater(
                     () -> {
                       setStatus("Error: " + reason);
@@ -368,8 +381,8 @@ public class DockerPanelController {
    * Extracts a concise, user-readable reason from a {@link DockerException}.
    *
    * <p>docker-java wraps the Docker daemon's error as the cause exception whose message is the
-   * plain-text daemon response (e.g. "remove nginx_volume: volume is in use - [abc123]"). We
-   * prefer the cause message; if absent we fall back to the outer exception message.
+   * plain-text daemon response (e.g. "remove nginx_volume: volume is in use - [abc123]"). We prefer
+   * the cause message; if absent we fall back to the outer exception message.
    */
   private static String extractReason(DockerException e) {
     Throwable cause = e.getCause();
