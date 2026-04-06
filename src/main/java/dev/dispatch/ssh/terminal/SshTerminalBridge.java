@@ -35,6 +35,7 @@ public class SshTerminalBridge {
   // Strong reference required — JSObject.setMember() holds only a weak ref,
   // so without this field the GC would collect the handler and break JS→Java calls.
   private JavaTerminalHandler terminalHandler;
+  private Runnable onConnectionLost;
 
   public SshTerminalBridge(
       WebEngine engine, ChannelShell channel, InputStream stdout, OutputStream stdin) {
@@ -54,6 +55,14 @@ public class SshTerminalBridge {
     Thread.ofVirtual().name("ssh-output-pump").start(this::pumpSshOutput);
   }
 
+  /**
+   * Registers a callback invoked when the SSH stream ends unexpectedly (connection lost). Not
+   * called when {@link #dispose()} triggers a clean shutdown.
+   */
+  public void setOnConnectionLost(Runnable onConnectionLost) {
+    this.onConnectionLost = onConnectionLost;
+  }
+
   /** Sends raw input data to the SSH session stdin. Safe to call from any thread. */
   public void sendInput(String data) {
     if (terminalHandler != null) {
@@ -71,6 +80,12 @@ public class SshTerminalBridge {
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
+
+  private void fireConnectionLost() {
+    if (onConnectionLost != null) {
+      onConnectionLost.run();
+    }
+  }
 
   private void registerJsHandler() {
     Platform.runLater(
@@ -99,9 +114,15 @@ public class SshTerminalBridge {
       }
     } catch (IOException e) {
       if (running) {
-        log.warn("SSH output stream ended: {}", e.getMessage());
+        log.warn("SSH output stream ended unexpectedly: {}", e.getMessage());
         Platform.runLater(() -> engine.executeScript("term.writeln('\\r\\n[Connection closed]')"));
+        fireConnectionLost();
       }
+    }
+    // Stream returned -1 without exception — clean EOF means the channel closed on the server side
+    if (running) {
+      log.warn("SSH output stream reached EOF — connection lost");
+      fireConnectionLost();
     }
     log.info("SSH output pump stopped");
   }
