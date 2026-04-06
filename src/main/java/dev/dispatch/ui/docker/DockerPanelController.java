@@ -157,7 +157,7 @@ public class DockerPanelController {
   }
 
   private void pruneImages() {
-    if (!confirm("Prune images", "Remove all unused (dangling) images?\nThis cannot be undone.")) return;
+    if (!confirm("Prune images", "Remove all unused images (not referenced by any container)?\nThis cannot be undone.")) return;
     runDockerOpWithResult(dockerService::pruneImages, "Pruning images");
   }
 

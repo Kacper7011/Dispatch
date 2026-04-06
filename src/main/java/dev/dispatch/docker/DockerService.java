@@ -3,7 +3,6 @@ package dev.dispatch.docker;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.model.Frame;
-import com.github.dockerjava.api.model.PruneType;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
@@ -318,30 +317,43 @@ public class DockerService implements AutoCloseable {
    */
   public String pruneContainers() {
     requireConnected();
-    log.info("Pruning stopped containers");
+    log.info("Pruning stopped containers via SSH");
+    // docker-java's pruneCmd(CONTAINERS) has a deserialization bug in 3.3.4 — use SSH exec instead.
     try {
-      dockerClient.pruneCmd(PruneType.CONTAINERS).exec();
-      return "Stopped containers removed";
+      ExecResult result = sshSession.exec("docker container prune -f 2>&1");
+      if (!result.isSuccess()) {
+        throw new DockerException("docker container prune failed: " + result.getStdout().trim());
+      }
+      if (nothingPruned(result.getStdout())) return "No stopped containers to remove";
+      String reclaimed = extractReclaimedSpace(result.getStdout());
+      return "Stopped containers removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
+    } catch (DockerException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new DockerException("Failed to prune containers", e);
     }
   }
 
   /**
-   * Removes all dangling (unused, untagged) images.
+   * Removes all unused images (including tagged ones not referenced by any container).
+   *
+   * <p>Uses {@code -a} to include non-dangling images — equivalent to Portainer's "unused images"
+   * prune. Without {@code -a}, Docker only removes untagged (dangling) images.
    *
    * @return human-readable summary, e.g. {@code "5 images removed · 1.2 GB freed"}
    * @throws DockerException if the daemon returns an error
    */
   public String pruneImages() {
     requireConnected();
-    log.info("Pruning dangling images via SSH");
+    log.info("Pruning unused images via SSH");
     // docker-java's pruneCmd(IMAGES) has a deserialization bug in 3.3.4 — use SSH exec instead.
+    // -a: also remove tagged images not referenced by any container (not just dangling ones).
     try {
-      ExecResult result = sshSession.exec("docker image prune -f 2>&1");
+      ExecResult result = sshSession.exec("docker image prune -a -f 2>&1");
       if (!result.isSuccess()) {
         throw new DockerException("docker image prune failed: " + result.getStdout().trim());
       }
+      if (nothingPruned(result.getStdout())) return "No unused images to remove";
       String reclaimed = extractReclaimedSpace(result.getStdout());
       return "Unused images removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
     } catch (DockerException e) {
@@ -359,17 +371,27 @@ public class DockerService implements AutoCloseable {
    */
   public String pruneNetworks() {
     requireConnected();
-    log.info("Pruning unused networks");
+    log.info("Pruning unused networks via SSH");
+    // docker-java's pruneCmd(NETWORKS) has a deserialization bug in 3.3.4 — use SSH exec instead.
     try {
-      dockerClient.pruneCmd(PruneType.NETWORKS).exec();
+      ExecResult result = sshSession.exec("docker network prune -f 2>&1");
+      if (!result.isSuccess()) {
+        throw new DockerException("docker network prune failed: " + result.getStdout().trim());
+      }
+      if (nothingPruned(result.getStdout())) return "No unused networks to remove";
       return "Unused networks removed";
+    } catch (DockerException e) {
+      throw e;
     } catch (RuntimeException e) {
       throw new DockerException("Failed to prune networks", e);
     }
   }
 
   /**
-   * Removes all volumes not referenced by any container.
+   * Removes all volumes not referenced by any container, including named volumes.
+   *
+   * <p>Uses {@code --all} because Docker 23.0+ changed {@code docker volume prune} to only remove
+   * anonymous volumes by default. Named unused volumes require the {@code --all} flag.
    *
    * @return human-readable summary, e.g. {@code "1 volume removed · 500 MB freed"}
    * @throws DockerException if the daemon returns an error
@@ -378,11 +400,13 @@ public class DockerService implements AutoCloseable {
     requireConnected();
     log.info("Pruning unused volumes via SSH");
     // docker-java's pruneCmd(VOLUMES) has a deserialization bug in 3.3.4 — use SSH exec instead.
+    // --all: include named volumes (Docker 23.0+ default only removes anonymous volumes).
     try {
-      ExecResult result = sshSession.exec("docker volume prune -f 2>&1");
+      ExecResult result = sshSession.exec("docker volume prune --all -f 2>&1");
       if (!result.isSuccess()) {
         throw new DockerException("docker volume prune failed: " + result.getStdout().trim());
       }
+      if (nothingPruned(result.getStdout())) return "No unused volumes to remove";
       String reclaimed = extractReclaimedSpace(result.getStdout());
       return "Unused volumes removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
     } catch (DockerException e) {
@@ -395,6 +419,14 @@ public class DockerService implements AutoCloseable {
   // -------------------------------------------------------------------------
   // Private helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Returns {@code true} if the docker prune output contains no "Deleted" section,
+   * meaning the daemon had nothing to remove.
+   */
+  private static boolean nothingPruned(String output) {
+    return !output.contains("Deleted");
+  }
 
   /**
    * Extracts the "Total reclaimed space: X" value from docker prune output.
