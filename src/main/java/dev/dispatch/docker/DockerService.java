@@ -326,7 +326,8 @@ public class DockerService implements AutoCloseable {
       }
       if (nothingPruned(result.getStdout())) return "No stopped containers to remove";
       String reclaimed = extractReclaimedSpace(result.getStdout());
-      return "Stopped containers removed" + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
+      return "Stopped containers removed"
+          + (reclaimed.isEmpty() ? "" : " · " + reclaimed + " freed");
     } catch (DockerException e) {
       throw e;
     } catch (RuntimeException e) {
@@ -421,16 +422,16 @@ public class DockerService implements AutoCloseable {
   // -------------------------------------------------------------------------
 
   /**
-   * Returns {@code true} if the docker prune output contains no "Deleted" section,
-   * meaning the daemon had nothing to remove.
+   * Returns {@code true} if the docker prune output contains no "Deleted" section, meaning the
+   * daemon had nothing to remove.
    */
   private static boolean nothingPruned(String output) {
     return !output.contains("Deleted");
   }
 
   /**
-   * Extracts the "Total reclaimed space: X" value from docker prune output.
-   * Returns an empty string if the line is not found or the value is zero.
+   * Extracts the "Total reclaimed space: X" value from docker prune output. Returns an empty string
+   * if the line is not found or the value is zero.
    */
   private static String extractReclaimedSpace(String output) {
     for (String line : output.lines().toList()) {
@@ -441,7 +442,6 @@ public class DockerService implements AutoCloseable {
     }
     return "";
   }
-
 
   private static DockerClient buildClient(int localPort) {
     String host = "tcp://localhost:" + localPort;

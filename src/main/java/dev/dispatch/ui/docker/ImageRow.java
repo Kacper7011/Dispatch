@@ -40,8 +40,20 @@ class ImageRow extends HBox {
 
     getChildren().addAll(icon, name, tag, removeBtn);
 
-    setOnMouseEntered(e -> { removeBtn.setVisible(true); removeBtn.setManaged(true); tag.setVisible(false); tag.setManaged(false); });
-    setOnMouseExited(e -> { removeBtn.setVisible(false); removeBtn.setManaged(false); tag.setVisible(true); tag.setManaged(true); });
+    setOnMouseEntered(
+        e -> {
+          removeBtn.setVisible(true);
+          removeBtn.setManaged(true);
+          tag.setVisible(false);
+          tag.setManaged(false);
+        });
+    setOnMouseExited(
+        e -> {
+          removeBtn.setVisible(false);
+          removeBtn.setManaged(false);
+          tag.setVisible(true);
+          tag.setManaged(true);
+        });
     setOnMouseClicked(e -> panel.selectRow(this));
   }
 
