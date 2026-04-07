@@ -26,6 +26,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
@@ -238,7 +239,6 @@ public class SshTabController {
     ComboBox<Host> hostCombo = new ComboBox<>();
     hostCombo.getItems().addAll(hosts);
     hostCombo.setPromptText("Select host…");
-    hostCombo.setPrefWidth(220);
     hostCombo.setCellFactory(
         lv ->
             new ListCell<>() {
@@ -254,7 +254,7 @@ public class SshTabController {
     statusLabel.getStyleClass().add("reconnect-message");
 
     Button connectBtn = new Button("Connect");
-    connectBtn.getStyleClass().add("reconnect-btn");
+    connectBtn.getStyleClass().add("picker-connect-btn");
     connectBtn.setOnAction(
         e -> onPickerConnectClicked(slotIndex, hostCombo, connectBtn, statusLabel));
 
@@ -267,12 +267,28 @@ public class SshTabController {
     header.setAlignment(Pos.CENTER_RIGHT);
     header.getStyleClass().add("pane-header");
 
-    VBox center = new VBox(10, new Label("Connect to host"), hostCombo, connectBtn, statusLabel);
+    Label title = new Label("Connect to host");
+    title.getStyleClass().add("host-picker-title");
+
+    hostCombo.setPrefWidth(160);
+    connectBtn.setPrefWidth(160);
+
+    VBox card = new VBox(12, title, hostCombo, connectBtn, statusLabel);
+    card.getStyleClass().add("host-picker-card");
+    card.setAlignment(Pos.CENTER);
+
+    Region topSpacer = new Region();
+    Region bottomSpacer = new Region();
+    VBox.setVgrow(topSpacer, Priority.ALWAYS);
+    VBox.setVgrow(bottomSpacer, Priority.ALWAYS);
+
+    VBox center = new VBox(topSpacer, card, bottomSpacer);
     center.setAlignment(Pos.CENTER);
-    center.getStyleClass().add("host-picker");
+    center.setFillWidth(false);
 
     BorderPane pane = new BorderPane(center);
     pane.setTop(header);
+    pane.getStyleClass().add("host-picker");
     return pane;
   }
 
@@ -281,6 +297,11 @@ public class SshTabController {
     Host host = hostCombo.getValue();
     if (host == null) {
       statusLabel.setText("Please select a host first.");
+      return;
+    }
+    // Skip passphrase dialog if this key previously connected without a passphrase
+    if (host.getAuthType() == dev.dispatch.core.model.AuthType.KEY && host.isKeyNoPassphrase()) {
+      connectSlotAsync(slotIndex, host, SshCredentials.keyNoPassphrase(), connectBtn, statusLabel);
       return;
     }
     // Prompt for credentials on the FX thread, then connect on a virtual thread
@@ -301,6 +322,11 @@ public class SshTabController {
             () -> {
               try {
                 SshSession newSession = sshService.connect(host, credentials);
+                if (!credentials.hasPassphrase()
+                    && credentials.getPassword() == null
+                    && !host.isKeyNoPassphrase()) {
+                  hostRepository.markKeyNoPassphrase(host.getId());
+                }
                 Platform.runLater(
                     () -> {
                       activateSlot(slotIndex, newSession);

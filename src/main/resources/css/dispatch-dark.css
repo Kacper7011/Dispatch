@@ -1134,12 +1134,110 @@
 /* ── Split-pane host picker ────────────────────────────────────────────────── */
 
 .host-picker {
-  -fx-padding: 24;
+  -fx-background-color: -cd-bg;
 }
 
-.host-picker > .label {
-  -fx-text-fill: -cd-fg-dim;
+.host-picker-card {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 6;
+  -fx-background-radius: 6;
+  -fx-padding: 24 28 24 28;
+  -fx-spacing: 12;
+}
+
+.host-picker-title {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+  -fx-padding: 0 0 4 0;
+}
+
+.picker-connect-btn {
+  -fx-background-color: -cd-accent;
+  -fx-background-radius: 4;
+  -fx-border-radius: 4;
+  -fx-text-fill: -cd-bg;
   -fx-font-size: 12px;
+  -fx-padding: 7 0 7 0;
+  -fx-cursor: hand;
+}
+
+.picker-connect-btn:hover {
+  -fx-background-color: -cd-cyan;
+}
+
+/* ── Host picker ComboBox ──────────────────────────────────────────────────── */
+
+.host-picker-card .combo-box {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-padding: 0;
+}
+
+.host-picker-card .combo-box:focused,
+.host-picker-card .combo-box:showing {
+  -fx-border-color: -cd-accent;
+}
+
+.host-picker-card .combo-box .list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+  -fx-padding: 6 10 6 10;
+  -fx-font-size: 12px;
+}
+
+.host-picker-card .combo-box .list-cell:empty {
+  -fx-background-color: transparent;
+}
+
+.host-picker-card .combo-box .arrow-button {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 0 8 0 0;
+}
+
+.host-picker-card .combo-box .arrow {
+  -fx-background-color: -cd-fg-dim;
+  -fx-mark-color: -cd-fg-dim;
+}
+
+/* Popup dropdown list */
+.combo-box-popup .list-view {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 12, 0, 0, 4);
+  -fx-padding: 4 0 4 0;
+}
+
+.combo-box-popup .list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+  -fx-padding: 7 12 7 12;
+  -fx-font-size: 12px;
+  -fx-border-color: transparent;
+  -fx-cursor: hand;
+}
+
+.combo-box-popup .list-cell:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.08);
+  -fx-text-fill: -cd-fg;
+}
+
+.combo-box-popup .list-cell:selected,
+.combo-box-popup .list-cell:focused {
+  -fx-background-color: rgba(126, 184, 186, 0.15);
+  -fx-text-fill: -cd-accent;
+}
+
+.combo-box-popup .list-cell:empty {
+  -fx-background-color: transparent;
 }
 
 /* ── Reconnect overlay (shown on LOST state) ──────────────────────────────── */
