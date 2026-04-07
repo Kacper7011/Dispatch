@@ -108,6 +108,43 @@ public class PaneLayoutManager {
     return leaves;
   }
 
+  /**
+   * Swaps the {@link PaneContent} between two leaves in-place. Neither leaf moves in the tree; only
+   * their content references are exchanged. Used by {@link PaneDragHandler} after a drop.
+   *
+   * @param a first leaf
+   * @param b second leaf
+   */
+  public void swapLeafContent(TerminalNode a, TerminalNode b) {
+    PaneContent contentA = a.getContent();
+    boolean connectedA = a.isConnected();
+    PaneContent contentB = b.getContent();
+    boolean connectedB = b.isConnected();
+
+    // Swap raw content — bypass the connected-flag logic in setContent() because
+    // TerminalPane ↔ PendingTerminalPane swaps must also transfer the connected state.
+    a.setRawContent(contentB, connectedB);
+    b.setRawContent(contentA, connectedA);
+
+    rebuildView();
+    log.debug("swapLeafContent — leaves swapped");
+  }
+
+  /**
+   * Searches the tree for the leaf whose current content is {@code target}. Returns {@code null} if
+   * not found. Used by {@link PaneDragHandler} to resolve the owning leaf at drag time, which
+   * remains correct even after {@link #swapLeafContent} has rearranged contents.
+   *
+   * @param target the content instance to look up
+   * @return the leaf currently holding {@code target}, or {@code null}
+   */
+  public TerminalNode findLeafByContent(PaneContent target) {
+    return collectLeaves().stream()
+        .filter(leaf -> leaf.getContent() == target)
+        .findFirst()
+        .orElse(null);
+  }
+
   // ── View reconstruction ───────────────────────────────────────────────────
 
   /**

@@ -1114,6 +1114,24 @@
   -fx-text-fill: -cd-accent;
 }
 
+.pane-drag-handle {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 12px;
+  -fx-padding: 0 4 0 2;
+  -fx-cursor: move;
+}
+
+.pane-drag-handle:hover {
+  -fx-text-fill: -cd-fg;
+}
+
+/* Highlighted when a pane is being dragged over this slot */
+.pane-drop-target {
+  -fx-border-color: -cd-accent;
+  -fx-border-width: 2;
+  -fx-border-radius: 2;
+}
+
 .pane-close-btn {
   -fx-background-color: transparent;
   -fx-text-fill: -cd-fg-dim2;

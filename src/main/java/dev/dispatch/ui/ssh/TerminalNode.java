@@ -73,6 +73,16 @@ public final class TerminalNode implements PaneNode {
     this.connected = false;
   }
 
+  /**
+   * Sets both content and connected flag atomically. Used by {@link
+   * PaneLayoutManager#swapLeafContent} to transfer content between leaves while preserving each
+   * leaf's connection state exactly as it was.
+   */
+  public void setRawContent(PaneContent content, boolean connected) {
+    this.content = content;
+    this.connected = connected;
+  }
+
   public SplitRequestHandler getSplitHandler() {
     return splitHandler;
   }
