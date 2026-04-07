@@ -10,7 +10,6 @@ import dev.dispatch.storage.HostRepository;
 import dev.dispatch.storage.SessionRepository;
 import dev.dispatch.ui.CredentialDialog;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import javafx.application.Platform;
@@ -22,9 +21,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -35,10 +32,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Manages the UI and lifecycle of a single SSH session tab.
  *
- * <p>The tab holds a {@link SplitPane} with one or more slots. The first slot is the primary
- * connected terminal. Each additional slot (created via split buttons) starts as a host-picker UI
- * that lets the user connect to any saved host independently — so left and right panes can talk to
- * different servers simultaneously.
+ * <p>Panes are arranged in a tmux-style binary tree managed by {@link PaneLayoutManager}. Each leaf
+ * is a {@link TerminalNode} — either a live {@link TerminalPane} or a pending {@link
+ * PendingTerminalPane}. Internal nodes are {@link SplitNode}s. The tree is fully recursive, so any
+ * pane can be split independently in any direction at any depth.
  */
 public class SshTabController {
 
@@ -49,19 +46,15 @@ public class SshTabController {
   private final HostRepository hostRepository;
   private final SshCredentials primaryCredentials;
 
-  /** Each slot is either a {@link TerminalPane} (connected) or a {@link BorderPane} (pending). */
-  private final List<Object> slots = new ArrayList<>();
-
   private SshSession primarySession;
-  private SplitPane splitPane;
+  private TerminalNode primaryLeaf;
+  private PaneLayoutManager layoutManager;
   private StackPane contentPane;
   private VBox reconnectOverlay;
   private Label overlayMessage;
   private Session dbSession;
 
   private Consumer<SshSession> onReconnected;
-
-  /** Fired on the FX thread each time a secondary slot successfully connects to a new host. */
   private Consumer<SshSession> onSlotConnected;
 
   /**
@@ -109,13 +102,11 @@ public class SshTabController {
   public Node createNode() {
     dbSession = sessionRepo.openSession(primarySession.getHost().getId());
 
-    splitPane = new SplitPane();
-    splitPane.setOrientation(Orientation.HORIZONTAL);
-    VBox.setVgrow(splitPane, Priority.ALWAYS);
+    primaryLeaf = createConnectedLeaf(primarySession);
+    layoutManager = new PaneLayoutManager(primaryLeaf);
 
-    addConnectedPane(primarySession);
-
-    VBox layout = new VBox(buildToolbar(), splitPane);
+    VBox layout = new VBox(layoutManager.getRootView());
+    VBox.setVgrow(layoutManager.getRootView(), Priority.ALWAYS);
     layout.getStyleClass().add("ssh-tab-layout");
 
     reconnectOverlay = buildReconnectOverlay();
@@ -145,95 +136,92 @@ public class SshTabController {
    */
   public void dispose() {
     closeDbSession();
-    slots.forEach(
-        slot -> {
-          if (slot instanceof TerminalPane tp) tp.dispose();
-        });
-    slots.clear();
+    layoutManager
+        .collectLeaves()
+        .forEach(
+            leaf -> {
+              if (leaf.getContent() != null) leaf.getContent().dispose();
+            });
     log.info("SshTabController disposed for {}", primarySession.getHost().getName());
   }
 
-  // ── Pane management ──────────────────────────────────────────────────────────
+  // ── Leaf factory helpers ──────────────────────────────────────────────────
 
-  /** Adds a connected terminal pane for the given session. */
-  private void addConnectedPane(SshSession session) {
-    int index = slots.size();
-    TerminalPane pane = new TerminalPane(session, () -> removeSlot(index));
-    slots.add(pane);
-    splitPane.getItems().add(pane.getNode());
-    updateCloseButtons();
+  /**
+   * Creates a {@link TerminalNode} backed by a live {@link TerminalPane} and wires up its split and
+   * close handlers.
+   */
+  private TerminalNode createConnectedLeaf(SshSession session) {
+    TerminalNode leaf = new TerminalNode();
+
+    TerminalPane pane =
+        new TerminalPane(
+            session, () -> removeLeaf(leaf), orientation -> splitLeaf(leaf, orientation));
+
+    leaf.setContent(pane);
+    leaf.setSplitHandler((l, orientation) -> splitLeaf(l, orientation));
+    leaf.setCloseHandler(() -> removeLeaf(leaf));
+    return leaf;
   }
 
   /**
-   * Adds an empty host-picker pane. The user selects a host and connects independently of the
-   * primary session.
+   * Creates a {@link TerminalNode} in the pending state with a host-picker {@link
+   * PendingTerminalPane} as its content.
    */
-  private void addPendingPane() {
-    int index = slots.size();
-    BorderPane pending = buildHostPickerPane(index);
-    slots.add(pending);
-    splitPane.getItems().add(pending);
-    updateCloseButtons();
-    distributeEqually();
-    log.debug("Pending pane added at slot {}", index);
+  private TerminalNode createPendingLeaf() {
+    TerminalNode leaf = new TerminalNode();
+
+    BorderPane pickerContent = buildHostPickerPane(leaf);
+    PendingTerminalPane pending =
+        new PendingTerminalPane(
+            pickerContent, () -> removeLeaf(leaf), orientation -> splitLeaf(leaf, orientation));
+
+    leaf.setPendingContent(pending);
+    leaf.setSplitHandler((l, orientation) -> splitLeaf(l, orientation));
+    leaf.setCloseHandler(() -> removeLeaf(leaf));
+    return leaf;
   }
 
-  /** Replaces a pending host-picker slot with a live terminal once the user has connected. */
-  private void activateSlot(int index, SshSession session) {
-    TerminalPane pane = new TerminalPane(session, () -> removeSlot(index));
-    slots.set(index, pane);
-    splitPane.getItems().set(index, pane.getNode());
-    updateCloseButtons();
-    log.info("Slot {} connected to {}", index, session.getHost().getName());
+  // ── Layout tree operations ────────────────────────────────────────────────
+
+  /** Splits {@code leaf} by inserting a new pending pane next to it in {@code orientation}. */
+  private void splitLeaf(TerminalNode leaf, Orientation orientation) {
+    TerminalNode newLeaf = createPendingLeaf();
+    layoutManager.splitLeaf(leaf, orientation, newLeaf);
+    log.debug("Split {} — totalLeaves={}", orientation, layoutManager.collectLeaves().size());
   }
 
-  private void removeSlot(int index) {
-    if (slots.size() <= 1) return;
-    Object removed = slots.remove(index);
-    if (removed instanceof TerminalPane tp) tp.dispose();
-    splitPane.getItems().remove(index);
-    updateCloseButtons();
-    distributeEqually();
-    log.debug("Slot {} removed — total slots: {}", index, slots.size());
+  /** Removes {@code leaf} from the tree and disposes its content. */
+  private void removeLeaf(TerminalNode leaf) {
+    if (leaf.getContent() != null) leaf.getContent().dispose();
+    layoutManager.removeLeaf(leaf);
+    log.debug("Leaf removed — totalLeaves={}", layoutManager.collectLeaves().size());
   }
-
-  private void splitHorizontal() {
-    splitPane.setOrientation(Orientation.HORIZONTAL);
-    addPendingPane();
-  }
-
-  private void splitVertical() {
-    splitPane.setOrientation(Orientation.VERTICAL);
-    addPendingPane();
-  }
-
-  /** Distributes dividers so all panes receive equal space. */
-  private void distributeEqually() {
-    int count = slots.size();
-    if (count < 2) return;
-    double[] positions = new double[count - 1];
-    for (int i = 0; i < positions.length; i++) {
-      positions[i] = (double) (i + 1) / count;
-    }
-    splitPane.setDividerPositions(positions);
-  }
-
-  /** Shows close buttons only when more than one slot is open. */
-  private void updateCloseButtons() {
-    boolean show = slots.size() > 1;
-    slots.forEach(
-        slot -> {
-          if (slot instanceof TerminalPane tp) tp.showCloseButton(show);
-        });
-  }
-
-  // ── Host picker UI ────────────────────────────────────────────────────────────
 
   /**
-   * Builds a centered host-picker panel: a combo box of saved hosts and a Connect button. On
-   * successful connection the slot is replaced with a live terminal.
+   * Activates a pending leaf by replacing its {@link PendingTerminalPane} with a live {@link
+   * TerminalPane}.
    */
-  private BorderPane buildHostPickerPane(int slotIndex) {
+  private void activateLeaf(TerminalNode leaf, SshSession session) {
+    TerminalPane pane =
+        new TerminalPane(
+            session, () -> removeLeaf(leaf), orientation -> splitLeaf(leaf, orientation));
+
+    leaf.setContent(pane);
+    leaf.setSplitHandler((l, orientation) -> splitLeaf(l, orientation));
+    leaf.setCloseHandler(() -> removeLeaf(leaf));
+
+    layoutManager.replaceLeaf(leaf, leaf);
+    log.info("Leaf activated — connected to {}", session.getHost().getName());
+  }
+
+  // ── Host picker UI ────────────────────────────────────────────────────────
+
+  /**
+   * Builds the host-picker card for a pending leaf. On successful connection the leaf is activated
+   * in place.
+   */
+  private BorderPane buildHostPickerPane(TerminalNode leaf) {
     List<Host> hosts = hostRepository.findAll();
 
     ComboBox<Host> hostCombo = new ComboBox<>();
@@ -255,17 +243,7 @@ public class SshTabController {
 
     Button connectBtn = new Button("Connect");
     connectBtn.getStyleClass().add("picker-connect-btn");
-    connectBtn.setOnAction(
-        e -> onPickerConnectClicked(slotIndex, hostCombo, connectBtn, statusLabel));
-
-    // Close button for this pending pane
-    Button closeBtn = new Button("×");
-    closeBtn.getStyleClass().add("pane-close-btn");
-    closeBtn.setOnAction(e -> removeSlot(slotIndex));
-
-    HBox header = new HBox(closeBtn);
-    header.setAlignment(Pos.CENTER_RIGHT);
-    header.getStyleClass().add("pane-header");
+    connectBtn.setOnAction(e -> onPickerConnectClicked(leaf, hostCombo, connectBtn, statusLabel));
 
     Label title = new Label("Connect to host");
     title.getStyleClass().add("host-picker-title");
@@ -287,32 +265,33 @@ public class SshTabController {
     center.setFillWidth(false);
 
     BorderPane pane = new BorderPane(center);
-    pane.setTop(header);
     pane.getStyleClass().add("host-picker");
     return pane;
   }
 
   private void onPickerConnectClicked(
-      int slotIndex, ComboBox<Host> hostCombo, Button connectBtn, Label statusLabel) {
+      TerminalNode leaf, ComboBox<Host> hostCombo, Button connectBtn, Label statusLabel) {
     Host host = hostCombo.getValue();
     if (host == null) {
       statusLabel.setText("Please select a host first.");
       return;
     }
-    // Skip passphrase dialog if this key previously connected without a passphrase
     if (host.getAuthType() == dev.dispatch.core.model.AuthType.KEY && host.isKeyNoPassphrase()) {
-      connectSlotAsync(slotIndex, host, SshCredentials.keyNoPassphrase(), connectBtn, statusLabel);
+      connectLeafAsync(leaf, host, SshCredentials.keyNoPassphrase(), connectBtn, statusLabel);
       return;
     }
-    // Prompt for credentials on the FX thread, then connect on a virtual thread
     CredentialDialog.prompt(host)
         .ifPresentOrElse(
-            credentials -> connectSlotAsync(slotIndex, host, credentials, connectBtn, statusLabel),
+            credentials -> connectLeafAsync(leaf, host, credentials, connectBtn, statusLabel),
             () -> statusLabel.setText("Cancelled."));
   }
 
-  private void connectSlotAsync(
-      int slotIndex, Host host, SshCredentials credentials, Button connectBtn, Label statusLabel) {
+  private void connectLeafAsync(
+      TerminalNode leaf,
+      Host host,
+      SshCredentials credentials,
+      Button connectBtn,
+      Label statusLabel) {
     connectBtn.setDisable(true);
     statusLabel.setText("Connecting…");
 
@@ -329,11 +308,10 @@ public class SshTabController {
                 }
                 Platform.runLater(
                     () -> {
-                      activateSlot(slotIndex, newSession);
-                      distributeEqually();
+                      activateLeaf(leaf, newSession);
                       if (onSlotConnected != null) onSlotConnected.accept(newSession);
                     });
-                log.info("Split pane slot {} connected to {}", slotIndex, host.getName());
+                log.info("Split pane leaf connected to {}", host.getName());
               } catch (SshException e) {
                 log.error("Split connect failed to {}: {}", host.getName(), e.getMessage(), e);
                 Platform.runLater(
@@ -345,24 +323,7 @@ public class SshTabController {
             });
   }
 
-  // ── Toolbar ───────────────────────────────────────────────────────────────────
-
-  private HBox buildToolbar() {
-    Button splitH = new Button("Split ↔");
-    splitH.getStyleClass().add("split-btn");
-    splitH.setOnAction(e -> splitHorizontal());
-
-    Button splitV = new Button("Split ↕");
-    splitV.getStyleClass().add("split-btn");
-    splitV.setOnAction(e -> splitVertical());
-
-    HBox toolbar = new HBox(4, splitH, splitV);
-    toolbar.getStyleClass().add("pane-toolbar");
-    toolbar.setAlignment(Pos.CENTER_LEFT);
-    return toolbar;
-  }
-
-  // ── Reconnect overlay (primary session) ──────────────────────────────────────
+  // ── Reconnect overlay (primary session) ──────────────────────────────────
 
   private VBox buildReconnectOverlay() {
     Label icon = new Label("⚠");
@@ -399,11 +360,9 @@ public class SshTabController {
                 Platform.runLater(
                     () -> {
                       dbSession = sessionRepo.openSession(primarySession.getHost().getId());
-                      replacePrimaryTerminal(newSession);
+                      replacePrimaryLeaf(newSession);
                       reconnectOverlay.setVisible(false);
-                      if (onReconnected != null) {
-                        onReconnected.accept(newSession);
-                      }
+                      if (onReconnected != null) onReconnected.accept(newSession);
                       log.info("Primary session reconnected to {}", newSession.getHost().getName());
                     });
               } catch (SshException e) {
@@ -418,20 +377,26 @@ public class SshTabController {
   }
 
   /**
-   * Replaces only the primary (index 0) terminal with a fresh one. Secondary split panes are kept
-   * as-is — they have their own independent connections.
+   * Replaces only the primary leaf terminal with a fresh one after reconnect. Secondary panes are
+   * kept as-is — they each have their own independent SSH connections.
    */
-  private void replacePrimaryTerminal(SshSession newSession) {
-    if (!slots.isEmpty() && slots.get(0) instanceof TerminalPane tp) {
-      tp.dispose();
-      TerminalPane fresh = new TerminalPane(newSession, () -> removeSlot(0));
-      slots.set(0, fresh);
-      splitPane.getItems().set(0, fresh.getNode());
-      updateCloseButtons();
-    }
+  private void replacePrimaryLeaf(SshSession newSession) {
+    if (primaryLeaf.getContent() != null) primaryLeaf.getContent().dispose();
+
+    TerminalPane fresh =
+        new TerminalPane(
+            newSession,
+            () -> removeLeaf(primaryLeaf),
+            orientation -> splitLeaf(primaryLeaf, orientation));
+
+    primaryLeaf.setContent(fresh);
+    primaryLeaf.setSplitHandler((l, orientation) -> splitLeaf(l, orientation));
+    primaryLeaf.setCloseHandler(() -> removeLeaf(primaryLeaf));
+
+    layoutManager.replaceLeaf(primaryLeaf, primaryLeaf);
   }
 
-  // ── DB helpers ────────────────────────────────────────────────────────────────
+  // ── DB helpers ────────────────────────────────────────────────────────────
 
   private void closeDbSession() {
     if (dbSession != null && !dbSession.isClosed()) {

@@ -1090,6 +1090,30 @@
   -fx-padding: 2 4 2 4;
 }
 
+.pane-header-btn {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 12px;
+  -fx-padding: 0 5 0 5;
+  -fx-cursor: hand;
+  -fx-min-width: 20;
+  -fx-border-color: transparent;
+}
+
+.pane-header-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.06);
+  -fx-text-fill: -cd-fg;
+}
+
+.pane-split-btn {
+  -fx-font-size: 11px;
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.pane-split-btn:hover {
+  -fx-text-fill: -cd-accent;
+}
+
 .pane-close-btn {
   -fx-background-color: transparent;
   -fx-text-fill: -cd-fg-dim2;

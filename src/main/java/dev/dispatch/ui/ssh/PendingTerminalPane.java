@@ -1,7 +1,5 @@
 package dev.dispatch.ui.ssh;
 
-import dev.dispatch.ssh.SshSession;
-import dev.dispatch.ssh.terminal.TerminalController;
 import java.util.function.Consumer;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -13,42 +11,36 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 
 /**
- * A single connected terminal pane inside a split SSH tab.
+ * A placeholder pane displayed in a pending (not yet connected) split slot.
  *
- * <p>Wraps a {@link TerminalController} with a header bar that contains per-pane split buttons (↔
- * ↕) and a close button (×). The header is always visible so the user can always split. The close
- * button is hidden when this is the sole pane and shown once a second pane exists. Must be created
- * and used on the FX Application Thread.
+ * <p>Wraps the host-picker {@link BorderPane} built by {@link SshTabController} and adds the same
+ * header bar as {@link TerminalPane} (split buttons always visible, close button hidden until a
+ * second pane exists). Implements {@link PaneContent} via composition — no terminal is opened.
  */
-public class TerminalPane implements PaneContent {
+public class PendingTerminalPane implements PaneContent {
 
-  private final TerminalController terminalController;
   private final BorderPane root;
   private final Button closeBtn;
 
   /**
-   * Creates the pane and immediately opens the terminal node.
+   * Creates a pending pane that wraps the provided host-picker content.
    *
-   * @param session the active SSH session — a new shell channel is opened for this pane
+   * @param pickerContent the host-picker UI built by {@link SshTabController}
    * @param onClose callback invoked when the user clicks the close button
    * @param onSplit callback invoked with the desired {@link Orientation} when a split button is
-   *     clicked; the layout manager responds by inserting a new pane next to this one
+   *     clicked
    */
-  public TerminalPane(SshSession session, Runnable onClose, Consumer<Orientation> onSplit) {
-    terminalController = new TerminalController(session);
-    Node terminalNode = terminalController.createNode();
-
+  public PendingTerminalPane(
+      BorderPane pickerContent, Runnable onClose, Consumer<Orientation> onSplit) {
     closeBtn = new Button("×");
     closeBtn.getStyleClass().addAll("pane-header-btn", "pane-close-btn");
     closeBtn.setOnAction(e -> onClose.run());
-    // Hidden until a second pane exists — no point closing the only pane.
     closeBtn.setVisible(false);
     closeBtn.setManaged(false);
 
     HBox header = buildHeader(onSplit, closeBtn);
-
-    root = new BorderPane(terminalNode);
-    root.setTop(header);
+    pickerContent.setTop(header);
+    root = pickerContent;
   }
 
   /** {@inheritDoc} */
@@ -57,25 +49,18 @@ public class TerminalPane implements PaneContent {
     return root;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Shows or hides only the close button. The split buttons (↔ ↕) remain visible at all times so
-   * the user can always open a new pane.
-   */
+  /** {@inheritDoc} Shows or hides only the close button; split buttons remain always visible. */
   @Override
   public void showCloseButton(boolean show) {
     closeBtn.setVisible(show);
     closeBtn.setManaged(show);
   }
 
-  /** {@inheritDoc} Closes the underlying SSH shell channel. */
+  /** No-op — pending panes have no underlying terminal to dispose. */
   @Override
-  public void dispose() {
-    terminalController.dispose();
-  }
+  public void dispose() {}
 
-  // ── Header construction ───────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
 
   private HBox buildHeader(Consumer<Orientation> onSplit, Button close) {
     Button splitH = new Button("↔");
