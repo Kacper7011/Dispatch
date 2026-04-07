@@ -69,30 +69,50 @@
     }
   });
 
-  // Notify Java of the current terminal size (cols x rows).
-  // Called both by term.onResize and explicitly after javaTerminal is registered.
+  // Sends the current terminal size to the SSH PTY.
+  // Called explicitly after javaTerminal is registered (initial sync).
   function notifyResize() {
     if (window.javaTerminal) {
       window.javaTerminal.resize(term.cols, term.rows);
     }
   }
 
-  // Forward every xterm.js resize to the SSH PTY (fires after term.resize() settles).
-  term.onResize(() => notifyResize());
+  // PTY resize is debounced independently from the visual resize.
+  // xterm.js adapts immediately on term.resize(), but the SIGWINCH is only sent
+  // to the server once the size has been stable for 300 ms. This prevents the shell
+  // from reflowing its output at a tiny intermediate size while the user is still
+  // dragging the split pane — those wrapped lines would otherwise stay in the
+  // scrollback buffer and remain garbled after the pane is expanded again.
+  let ptyResizeTimer = null;
+  term.onResize(() => {
+    clearTimeout(ptyResizeTimer);
+    ptyResizeTimer = setTimeout(notifyResize, 300);
+  });
 
   // Recalculate cols/rows from pixel dimensions when the container changes size.
-  // Does NOT call notifyResize() directly — term.onResize handles that.
-  const resizeObserver = new ResizeObserver(() => {
+  const MIN_COLS = 10;
+  const MIN_ROWS = 3;
+
+  function fitTerminal() {
     const container = document.getElementById('terminal');
-    const charWidth  = term._core._renderService.dimensions.css.cell.width;
-    const charHeight = term._core._renderService.dimensions.css.cell.height;
+    const dims = term._core._renderService.dimensions.css.cell;
+    const charWidth  = dims ? dims.width  : 0;
+    const charHeight = dims ? dims.height : 0;
     if (charWidth > 0 && charHeight > 0) {
-      const cols = Math.max(1, Math.floor(container.clientWidth  / charWidth));
-      const rows = Math.max(1, Math.floor(container.clientHeight / charHeight));
+      const cols = Math.max(MIN_COLS, Math.floor(container.clientWidth  / charWidth));
+      const rows = Math.max(MIN_ROWS, Math.floor(container.clientHeight / charHeight));
       if (cols !== term.cols || rows !== term.rows) {
         term.resize(cols, rows);
       }
     }
+  }
+
+  // Visual resize is debounced at 100 ms — short enough to feel responsive,
+  // long enough to skip intermediate frames while dragging.
+  let visualResizeTimer = null;
+  const resizeObserver = new ResizeObserver(() => {
+    clearTimeout(visualResizeTimer);
+    visualResizeTimer = setTimeout(fitTerminal, 100);
   });
   resizeObserver.observe(document.getElementById('terminal'));
 
