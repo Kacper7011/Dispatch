@@ -5,6 +5,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -14,13 +15,15 @@ import javafx.scene.layout.Region;
  * A placeholder pane displayed in a pending (not yet connected) split slot.
  *
  * <p>Wraps the host-picker {@link BorderPane} built by {@link SshTabController} and adds the same
- * header bar as {@link TerminalPane} (split buttons always visible, close button hidden until a
- * second pane exists). Implements {@link PaneContent} via composition — no terminal is opened.
+ * header bar as {@link TerminalPane} (drag handle, split buttons always visible, close button
+ * hidden until a second pane exists). Implements {@link PaneContent} via composition — no terminal
+ * is opened.
  */
 public class PendingTerminalPane implements PaneContent {
 
   private final BorderPane root;
   private final Button closeBtn;
+  private final Label dragHandle;
 
   /**
    * Creates a pending pane that wraps the provided host-picker content.
@@ -32,13 +35,16 @@ public class PendingTerminalPane implements PaneContent {
    */
   public PendingTerminalPane(
       BorderPane pickerContent, Runnable onClose, Consumer<Orientation> onSplit) {
+    dragHandle = new Label("⠿");
+    dragHandle.getStyleClass().add("pane-drag-handle");
+
     closeBtn = new Button("×");
     closeBtn.getStyleClass().addAll("pane-header-btn", "pane-close-btn");
     closeBtn.setOnAction(e -> onClose.run());
     closeBtn.setVisible(false);
     closeBtn.setManaged(false);
 
-    HBox header = buildHeader(onSplit, closeBtn);
+    HBox header = buildHeader(dragHandle, onSplit, closeBtn);
     pickerContent.setTop(header);
     root = pickerContent;
   }
@@ -49,7 +55,13 @@ public class PendingTerminalPane implements PaneContent {
     return root;
   }
 
-  /** {@inheritDoc} Shows or hides only the close button; split buttons remain always visible. */
+  /** {@inheritDoc} */
+  @Override
+  public Node getDragHandle() {
+    return dragHandle;
+  }
+
+  /** {@inheritDoc} Shows or hides only the close button; drag handle and split buttons stay. */
   @Override
   public void showCloseButton(boolean show) {
     closeBtn.setVisible(show);
@@ -62,7 +74,7 @@ public class PendingTerminalPane implements PaneContent {
 
   // ── Header ────────────────────────────────────────────────────────────────
 
-  private HBox buildHeader(Consumer<Orientation> onSplit, Button close) {
+  private HBox buildHeader(Label handle, Consumer<Orientation> onSplit, Button close) {
     Button splitH = new Button("↔");
     splitH.getStyleClass().addAll("pane-header-btn", "pane-split-btn");
     splitH.setOnAction(e -> onSplit.accept(Orientation.HORIZONTAL));
@@ -74,7 +86,7 @@ public class PendingTerminalPane implements PaneContent {
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
 
-    HBox bar = new HBox(4, splitH, splitV, spacer, close);
+    HBox bar = new HBox(4, handle, splitH, splitV, spacer, close);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("pane-header");
     return bar;

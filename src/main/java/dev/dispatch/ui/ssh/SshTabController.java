@@ -49,6 +49,7 @@ public class SshTabController {
   private SshSession primarySession;
   private TerminalNode primaryLeaf;
   private PaneLayoutManager layoutManager;
+  private PaneDragHandler dragHandler;
   private StackPane contentPane;
   private VBox reconnectOverlay;
   private Label overlayMessage;
@@ -104,6 +105,7 @@ public class SshTabController {
 
     primaryLeaf = createConnectedLeaf(primarySession);
     layoutManager = new PaneLayoutManager(primaryLeaf);
+    dragHandler = new PaneDragHandler(layoutManager, layoutManager.getRootView());
 
     VBox layout = new VBox(layoutManager.getRootView());
     VBox.setVgrow(layoutManager.getRootView(), Priority.ALWAYS);
@@ -188,6 +190,7 @@ public class SshTabController {
   private void splitLeaf(TerminalNode leaf, Orientation orientation) {
     TerminalNode newLeaf = createPendingLeaf();
     layoutManager.splitLeaf(leaf, orientation, newLeaf);
+    dragHandler.refresh();
     log.debug("Split {} — totalLeaves={}", orientation, layoutManager.collectLeaves().size());
   }
 
@@ -195,6 +198,7 @@ public class SshTabController {
   private void removeLeaf(TerminalNode leaf) {
     if (leaf.getContent() != null) leaf.getContent().dispose();
     layoutManager.removeLeaf(leaf);
+    dragHandler.refresh();
     log.debug("Leaf removed — totalLeaves={}", layoutManager.collectLeaves().size());
   }
 
@@ -212,6 +216,7 @@ public class SshTabController {
     leaf.setCloseHandler(() -> removeLeaf(leaf));
 
     layoutManager.replaceLeaf(leaf, leaf);
+    dragHandler.refresh();
     log.info("Leaf activated — connected to {}", session.getHost().getName());
   }
 
@@ -394,6 +399,7 @@ public class SshTabController {
     primaryLeaf.setCloseHandler(() -> removeLeaf(primaryLeaf));
 
     layoutManager.replaceLeaf(primaryLeaf, primaryLeaf);
+    dragHandler.refresh();
   }
 
   // ── DB helpers ────────────────────────────────────────────────────────────
