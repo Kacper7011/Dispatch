@@ -280,35 +280,57 @@ public class DockerPanelController {
       VBox volumeItems = volumesSection.getItemsBox();
 
       if (multiHost) {
-        containerItems
-            .getChildren()
-            .add(buildHostHeader(data.entry(), () -> pruneContainers(data.entry().service())));
-        imageItems
-            .getChildren()
-            .add(buildHostHeader(data.entry(), () -> pruneImages(data.entry().service())));
-        networkItems
-            .getChildren()
-            .add(buildHostHeader(data.entry(), () -> pruneNetworks(data.entry().service())));
-        volumeItems
-            .getChildren()
-            .add(buildHostHeader(data.entry(), () -> pruneVolumes(data.entry().service())));
-      }
+        HostGroup cg =
+            buildCollapsibleHostGroup(data.entry(), () -> pruneContainers(data.entry().service()));
+        HostGroup ig =
+            buildCollapsibleHostGroup(data.entry(), () -> pruneImages(data.entry().service()));
+        HostGroup ng =
+            buildCollapsibleHostGroup(data.entry(), () -> pruneNetworks(data.entry().service()));
+        HostGroup vg =
+            buildCollapsibleHostGroup(data.entry(), () -> pruneVolumes(data.entry().service()));
 
-      data.containers()
-          .forEach(
-              c ->
-                  containerItems
-                      .getChildren()
-                      .add(new ContainerRow(c, data.entry().service(), this)));
-      data.images()
-          .forEach(
-              img -> imageItems.getChildren().add(new ImageRow(img, data.entry().service(), this)));
-      data.networks()
-          .forEach(
-              n -> networkItems.getChildren().add(new NetworkRow(n, data.entry().service(), this)));
-      data.volumes()
-          .forEach(
-              v -> volumeItems.getChildren().add(new VolumeRow(v, data.entry().service(), this)));
+        containerItems.getChildren().add(cg.group());
+        imageItems.getChildren().add(ig.group());
+        networkItems.getChildren().add(ng.group());
+        volumeItems.getChildren().add(vg.group());
+
+        data.containers()
+            .forEach(
+                c ->
+                    cg.items()
+                        .getChildren()
+                        .add(new ContainerRow(c, data.entry().service(), this)));
+        data.images()
+            .forEach(
+                img ->
+                    ig.items().getChildren().add(new ImageRow(img, data.entry().service(), this)));
+        data.networks()
+            .forEach(
+                n -> ng.items().getChildren().add(new NetworkRow(n, data.entry().service(), this)));
+        data.volumes()
+            .forEach(
+                v -> vg.items().getChildren().add(new VolumeRow(v, data.entry().service(), this)));
+      } else {
+        data.containers()
+            .forEach(
+                c ->
+                    containerItems
+                        .getChildren()
+                        .add(new ContainerRow(c, data.entry().service(), this)));
+        data.images()
+            .forEach(
+                img ->
+                    imageItems.getChildren().add(new ImageRow(img, data.entry().service(), this)));
+        data.networks()
+            .forEach(
+                n ->
+                    networkItems
+                        .getChildren()
+                        .add(new NetworkRow(n, data.entry().service(), this)));
+        data.volumes()
+            .forEach(
+                v -> volumeItems.getChildren().add(new VolumeRow(v, data.entry().service(), this)));
+      }
     }
 
     // Single-host: keep prune buttons on section headers
@@ -344,11 +366,14 @@ public class DockerPanelController {
 
   // ── Host sub-header ───────────────────────────────────────────────────────────
 
+  /** Groups the host header row together with its collapsible items VBox. */
+  private record HostGroup(VBox group, VBox items) {}
+
   /**
-   * Builds a collapsible sub-header label for one host inside a section. Shown only when multiple
-   * hosts are connected.
+   * Builds a collapsible host group (header + items VBox). Clicking the header arrow toggles
+   * visibility of the items. Shown only when multiple hosts are connected.
    */
-  private HBox buildHostHeader(HostEntry entry, Runnable pruneAction) {
+  private HostGroup buildCollapsibleHostGroup(HostEntry entry, Runnable pruneAction) {
     Label arrow = new Label("▾");
     arrow.getStyleClass().add("docker-host-arrow");
 
@@ -369,7 +394,22 @@ public class DockerPanelController {
     header.setAlignment(Pos.CENTER_LEFT);
     header.getStyleClass().add("docker-host-header");
     header.setPadding(new Insets(5, 10, 5, 8));
-    return header;
+
+    VBox items = new VBox();
+
+    // Toggle collapse when clicking the header but not the prune button
+    header.setOnMouseClicked(
+        e -> {
+          if (!pruneBtn.isHover()) {
+            boolean nowCollapsed = items.isManaged();
+            items.setVisible(!nowCollapsed);
+            items.setManaged(!nowCollapsed);
+            arrow.setText(nowCollapsed ? "▸" : "▾");
+          }
+        });
+
+    VBox group = new VBox(header, items);
+    return new HostGroup(group, items);
   }
 
   // ── Prune actions ─────────────────────────────────────────────────────────────

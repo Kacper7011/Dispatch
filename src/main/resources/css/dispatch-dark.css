@@ -1109,6 +1109,11 @@
   -fx-background-color: rgba(255, 255, 255, 0.03);
   -fx-border-color: transparent transparent -cd-border transparent;
   -fx-border-width: 0 0 1 0;
+  -fx-cursor: hand;
+}
+
+.docker-host-header:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.06);
 }
 
 .docker-host-arrow {
