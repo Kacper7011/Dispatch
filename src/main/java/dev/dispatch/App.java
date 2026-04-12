@@ -46,10 +46,11 @@ public class App extends Application {
     sshService = new SshService();
     tunnelService = new TunnelService();
 
-    // macOS: DECORATED so the OS renders native traffic-light controls automatically.
-    // Windows/Linux: TRANSPARENT so we can draw our own rounded corners and custom title bar.
+    // macOS: DECORATED lets the OS render native traffic-light controls automatically.
+    // Windows/Linux: UNDECORATED removes the native title bar so our custom chrome takes over.
+    // TRANSPARENT was avoided because it causes invisible windows on some Windows GPU drivers.
     boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
-    stage.initStyle(isMac ? StageStyle.DECORATED : StageStyle.TRANSPARENT);
+    stage.initStyle(isMac ? StageStyle.DECORATED : StageStyle.UNDECORATED);
 
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/dispatch/fxml/main.fxml"));
     Scene scene =
@@ -59,11 +60,9 @@ public class App extends Application {
     if (isMac) {
       // Let macOS draw the window chrome; flatten our top corners so they meet the native title bar
       scene.getRoot().getStyleClass().add("mac-chrome");
-    } else {
-      // Transparent fill + rounded clip only needed for our custom chrome on Windows/Linux
-      scene.setFill(Color.TRANSPARENT);
-      applyRoundedClip((Region) scene.getRoot());
     }
+    // Windows/Linux: solid scene fill so the window is always visible regardless of GPU driver.
+    // The .app-root CSS class handles border-radius and border for the visual chrome.
 
     stage.setScene(scene);
     loadIcon(stage, isMac);
