@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "dev.dispatch"
-version = "1.0.0"
+version = findProperty("appVersion") as String? ?: "1.0.0"
 
 java {
   toolchain {
