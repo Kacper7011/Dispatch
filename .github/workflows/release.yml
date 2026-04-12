@@ -79,7 +79,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.label }}
-          path: build/jpackage/**
+          path: |
+            build/jpackage/*.exe
+            build/jpackage/*.dmg
+            build/jpackage/*.deb
           if-no-files-found: error
 
   release:
