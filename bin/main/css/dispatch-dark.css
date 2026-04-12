@@ -1,0 +1,1312 @@
+/* ============================================================
+   Dispatch — Dark Minimal theme
+   ============================================================ */
+
+* {
+  -fx-font-family: "JetBrains Mono";
+  -fx-font-smoothing-type: lcd;
+
+  /* Base palette */
+  -cd-bg:           #161616;
+  -cd-bg-alt:       #1c1c1c;
+  -cd-bg-highlight: #252525;
+  -cd-border:       #282828;
+  -cd-border2:      #333333;
+  -cd-fg:           #e2e2e2;
+  -cd-fg-dim:       #909090;
+  -cd-fg-dim2:      #505050;
+
+  /* Colors */
+  -cd-red:          #d47e7e;
+  -cd-green:        #85c491;
+  -cd-yellow:       #d4b07a;
+  -cd-blue:         #91c8ff;
+  -cd-magenta:      #a090c0;
+  -cd-cyan:         #8ec8c8;
+  -cd-white:        #e2e2e2;
+
+  /* UI semantic */
+  -cd-accent:       #7eb8ba;
+  -cd-success:      #85c491;
+  -cd-warning:      #d4b07a;
+  -cd-error:        #d47e7e;
+  -cd-purple:       #a090c0;
+}
+
+.root {
+  -fx-background-color: transparent;
+  -fx-base: -cd-bg;
+}
+
+/* App window — rounded corners + border */
+.app-root {
+  -fx-background-color: -cd-bg;
+  -fx-background-radius: 10;
+  -fx-border-color: #484848;
+  -fx-border-width: 1.5;
+  -fx-border-radius: 10;
+}
+
+/* macOS: native window chrome handles the border and top corners — flatten them so the
+   content area meets the native title bar without a visible gap or double rounding. */
+.app-root.mac-chrome {
+  -fx-background-radius: 0 0 10 10;
+  -fx-border-color: transparent;
+  -fx-border-width: 0;
+  -fx-border-radius: 0;
+}
+
+.label {
+  -fx-text-fill: -cd-fg;
+}
+
+.text-field,
+.text-area {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: -cd-border2;
+  -fx-border-radius: 7px;
+  -fx-background-radius: 7px;
+  -fx-prompt-text-fill: -cd-fg-dim2;
+}
+
+.text-field:focused,
+.text-area:focused {
+  -fx-border-color: rgba(126, 184, 186, 0.4);
+}
+
+.button {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-radius: 6px;
+  -fx-background-radius: 6px;
+  -fx-cursor: hand;
+  -fx-padding: 5 12 5 12;
+  -fx-font-size: 11px;
+}
+
+.button:hover {
+  -fx-background-color: #2a2a2a;
+  -fx-border-color: #404040;
+  -fx-text-fill: -cd-fg;
+}
+
+.button:pressed {
+  -fx-background-color: -cd-border;
+}
+
+.button:disabled {
+  -fx-opacity: 0.35;
+}
+
+.list-view {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+}
+
+.list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+}
+
+.list-cell:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.04);
+}
+
+.list-cell:selected {
+  -fx-background-color: rgba(126, 184, 186, 0.07);
+  -fx-border-color: transparent transparent transparent -cd-accent;
+  -fx-border-width: 0 0 0 2;
+  -fx-text-fill: -cd-fg;
+}
+
+.list-cell:selected:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.1);
+}
+
+.table-view {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+}
+
+.table-row-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell:odd {
+  -fx-background-color: rgba(255, 255, 255, 0.01);
+}
+
+.table-row-cell:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.025);
+}
+
+.table-row-cell:selected {
+  -fx-background-color: rgba(126, 184, 186, 0.05);
+}
+
+.table-column-header {
+  -fx-background-color: -cd-bg;
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.table-column-header-background {
+  -fx-background-color: -cd-bg;
+}
+
+.column-header-background {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+.split-pane {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0;
+}
+
+/* 4px wide grab area, 1px visible line in the center */
+.split-pane > .split-pane-divider {
+  -fx-background-color: -cd-border;
+  -fx-padding: 0 2 0 2;
+  -fx-cursor: h-resize;
+}
+
+.split-pane > .split-pane-divider:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.45);
+}
+
+.split-pane > .split-pane-divider:pressed {
+  -fx-background-color: -cd-accent;
+}
+
+.tab-pane .tab-header-area .tab-header-background {
+  -fx-background-color: -cd-bg-alt;
+}
+
+.tab {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-padding: 6 16 6 16;
+}
+
+.tab:hover {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.tab:selected {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-accent;
+  -fx-border-color: transparent transparent -cd-accent transparent;
+  -fx-border-width: 0 0 2 0;
+}
+
+.tab-label {
+  -fx-text-fill: inherit;
+}
+
+.scroll-bar {
+  -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+  -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-background-radius: 3px;
+}
+
+.scroll-bar .thumb:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.15);
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+  -fx-background-color: transparent;
+}
+
+/* ============================================================
+   Status badges — pill shape, subtle tinted background
+   ============================================================ */
+
+.badge-success {
+  -fx-background-color: rgba(133, 196, 145, 0.12);
+  -fx-text-fill: -cd-success;
+  -fx-border-color: rgba(133, 196, 145, 0.25);
+  -fx-border-width: 1;
+  -fx-border-radius: 100;
+  -fx-background-radius: 100;
+  -fx-padding: 2 8 2 8;
+  -fx-font-size: 10px;
+}
+
+.badge-error {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-text-fill: -cd-error;
+  -fx-border-color: rgba(212, 126, 126, 0.25);
+  -fx-border-width: 1;
+  -fx-border-radius: 100;
+  -fx-background-radius: 100;
+  -fx-padding: 2 8 2 8;
+  -fx-font-size: 10px;
+}
+
+.badge-warning {
+  -fx-background-color: rgba(212, 176, 122, 0.12);
+  -fx-text-fill: -cd-warning;
+  -fx-border-color: rgba(212, 176, 122, 0.25);
+  -fx-border-width: 1;
+  -fx-border-radius: 100;
+  -fx-background-radius: 100;
+  -fx-padding: 2 8 2 8;
+  -fx-font-size: 10px;
+}
+
+/* ============================================================
+   Custom title bar
+   ============================================================ */
+
+.title-bar {
+  -fx-background-color: -cd-bg-alt;
+  /* top-left top-right bottom-right bottom-left — match app-root radius */
+  -fx-background-radius: 9 9 0 0;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-pref-height: 38px;
+  -fx-min-height: 38px;
+  -fx-max-height: 38px;
+}
+
+.title-bar-title {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
+}
+
+/* Traffic-light placeholders — only shown on macOS if custom titleBar is ever used as fallback.
+   On macOS the titleBar is hidden entirely; native DECORATED controls take over. */
+.traffic-light {
+  -fx-min-width: 12px;
+  -fx-min-height: 12px;
+  -fx-max-width: 12px;
+  -fx-max-height: 12px;
+  -fx-background-radius: 100;
+  -fx-cursor: hand;
+}
+
+.traffic-light-close { -fx-background-color: #ff5f57; }
+.traffic-light-min   { -fx-background-color: #febc2e; }
+.traffic-light-max   { -fx-background-color: #28c840; }
+
+.traffic-light-close:hover { -fx-background-color: #ff3b30; }
+.traffic-light-min:hover   { -fx-background-color: #e6a820; }
+.traffic-light-max:hover   { -fx-background-color: #1da832; }
+
+/* Icon button injected into the tab-header-area (e.g. Docker toggle). */
+.tab-toolbar-btn {
+  -fx-background-color: transparent !important;
+  -fx-background-insets: 0 !important;
+  -fx-background-radius: 5px !important;
+  -fx-border-color: transparent !important;
+  -fx-border-width: 0 !important;
+  -fx-padding: 2px 4px;
+  -fx-cursor: hand;
+  -fx-min-width: 30px;
+  -fx-min-height: 26px;
+  -fx-alignment: CENTER;
+  -fx-opacity: 0.85;
+}
+
+.tab-toolbar-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08) !important;
+  -fx-opacity: 1.0;
+}
+
+.tab-toolbar-btn:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+
+/* Windows title bar controls.
+   .title-bar .button targets all buttons in the bar (Button always carries "button" class).
+   !important on background-color + background-insets is needed to fully override AtlantaFX,
+   which sets both on .button in its user-agent stylesheet. */
+.title-bar .button {
+  -fx-background-color: transparent !important;
+  -fx-background-insets: 0 !important;
+  -fx-background-radius: 0 !important;
+  -fx-border-color: transparent !important;
+  -fx-border-width: 0 !important;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-padding: 0;
+  -fx-min-width: 46px;
+  -fx-min-height: 38px;
+  -fx-max-height: 38px;
+  -fx-font-size: 14px;
+  -fx-cursor: hand;
+}
+
+.title-bar .button:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.09) !important;
+  -fx-background-insets: 0 !important;
+  -fx-text-fill: -cd-fg;
+}
+
+.title-bar .button:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.15) !important;
+  -fx-background-insets: 0 !important;
+}
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
+.sidebar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent -cd-border transparent transparent;
+  -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-header {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+  -fx-font-weight: bold;
+}
+
+.sidebar-count {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 9px;
+  -fx-background-color: -cd-bg-highlight;
+  -fx-background-radius: 100;
+  -fx-padding: 2 7 2 7;
+}
+
+.sidebar-actions {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border transparent transparent transparent;
+  -fx-border-width: 1 0 0 0;
+}
+
+.host-list {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 4 8 4 8;
+}
+
+.host-list .list-cell {
+  -fx-background-color: transparent;
+  -fx-padding: 0;
+  -fx-background-radius: 8;
+}
+
+.host-list .list-cell:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.04);
+  -fx-background-radius: 8;
+}
+
+.host-list .list-cell:selected {
+  -fx-background-color: rgba(126, 184, 186, 0.07);
+  -fx-background-radius: 8;
+  -fx-border-color: transparent transparent transparent -cd-accent;
+  -fx-border-width: 0 0 0 2;
+}
+
+.host-cell-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+  -fx-font-weight: bold;
+}
+
+.host-cell-address {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+}
+
+/* ============================================================
+   Main content area
+   ============================================================ */
+
+.main-content {
+  -fx-background-color: -cd-bg;
+}
+
+.empty-state-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 13px;
+}
+
+/* ============================================================
+   Status bar
+   ============================================================ */
+
+.status-bar {
+  -fx-background-color: -cd-bg;
+  /* bottom corners match app-root radius */
+  -fx-background-radius: 0 0 9 9;
+  -fx-border-color: -cd-border transparent transparent transparent;
+  -fx-border-width: 1 0 0 0;
+  -fx-min-height: 22px;
+  -fx-max-height: 22px;
+}
+
+.status-item {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 9.5px;
+}
+
+.status-dot-ok {
+  -fx-background-color: -cd-success;
+  -fx-background-radius: 100;
+  -fx-min-width: 5px;
+  -fx-min-height: 5px;
+  -fx-max-width: 5px;
+  -fx-max-height: 5px;
+}
+
+.status-dot-warn {
+  -fx-background-color: -cd-warning;
+  -fx-background-radius: 100;
+  -fx-min-width: 5px;
+  -fx-min-height: 5px;
+  -fx-max-width: 5px;
+  -fx-max-height: 5px;
+}
+
+/* ============================================================
+   Credential / passphrase dialog
+   ============================================================ */
+
+.dialog-pane {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+}
+
+.dialog-pane > .header-panel {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 16 20 16 20;
+}
+
+.dialog-pane > .header-panel .label {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 12px;
+  -fx-wrap-text: true;
+}
+
+.dialog-pane > .content,
+.dialog-pane > .content.label {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0;
+}
+
+.dialog-pane .button-bar {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 0 16 14 16;
+}
+
+/* ============================================================
+   Host form
+   ============================================================ */
+
+.host-form {
+  -fx-background-color: -cd-bg;
+}
+
+.form-label {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+/* Radio buttons — no box background, just circle + label */
+.radio-button {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+  -fx-background-color: transparent;
+  -fx-background-radius: 0;
+}
+
+.radio-button:hover {
+  -fx-text-fill: -cd-fg;
+  -fx-background-color: transparent;
+}
+
+.radio-button .radio {
+  -fx-background-color: transparent;
+  -fx-background-radius: 100;
+  -fx-border-color: -cd-fg-dim2;
+  -fx-border-radius: 100;
+  -fx-border-width: 1.5;
+}
+
+.radio-button:hover .radio {
+  -fx-border-color: -cd-fg-dim;
+}
+
+.radio-button:selected .radio {
+  -fx-border-color: -cd-fg-dim;
+}
+
+.radio-button:selected .dot {
+  -fx-background-color: -cd-fg-dim;
+  -fx-background-radius: 100;
+}
+
+.form-error {
+  -fx-text-fill: -cd-error;
+  -fx-font-size: 11px;
+}
+
+.button-accent {
+  -fx-background-color: rgba(126, 184, 186, 0.18);
+  -fx-text-fill: -cd-accent;
+  -fx-border-color: rgba(126, 184, 186, 0.32);
+  -fx-border-radius: 6px;
+  -fx-background-radius: 6px;
+}
+
+.button-accent:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.26);
+  -fx-border-color: rgba(126, 184, 186, 0.48);
+  -fx-text-fill: -cd-accent;
+}
+
+.button-accent:disabled {
+  -fx-opacity: 0.4;
+}
+
+/* ============================================================
+   Docker panel
+   ============================================================ */
+
+.docker-panel {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent transparent -cd-border;
+  -fx-border-width: 0 0 0 1;
+}
+
+.docker-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+.docker-panel-title {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
+}
+
+.docker-status-label {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border transparent transparent transparent;
+  -fx-border-width: 1 0 0 0;
+}
+
+.docker-empty-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+}
+
+.button-danger {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-text-fill: -cd-error;
+  -fx-border-color: rgba(212, 126, 126, 0.25);
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-cursor: hand;
+  -fx-padding: 3 9 3 9;
+  -fx-font-size: 10px;
+}
+
+.button-danger:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.22);
+  -fx-border-color: rgba(212, 126, 126, 0.4);
+}
+
+/* ============================================================
+   Docker stats row
+   ============================================================ */
+
+.docker-stats-row {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-min-height: 56px;
+  -fx-max-height: 56px;
+}
+
+.docker-stat-box {
+  -fx-alignment: CENTER;
+  -fx-padding: 6 0 6 0;
+}
+
+.docker-stat-number {
+  -fx-font-size: 17px;
+  -fx-alignment: CENTER;
+  -fx-font-weight: bold;
+}
+
+.docker-stat-running {
+  -fx-text-fill: -cd-success;
+}
+
+.docker-stat-stopped {
+  -fx-text-fill: -cd-error;
+}
+
+.docker-stat-images {
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.docker-stat-label {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 8px;
+  -fx-alignment: CENTER;
+}
+
+.docker-stat-divider {
+  -fx-background-color: -cd-border;
+  -fx-padding: 0;
+  -fx-pref-width: 1px;
+}
+
+/* ============================================================
+   Container card list
+   ============================================================ */
+
+.container-list {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+}
+
+.container-list .list-cell {
+  -fx-background-color: transparent;
+  -fx-padding: 0;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+.container-list .list-cell:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.025);
+}
+
+.container-list .list-cell:selected {
+  -fx-background-color: rgba(126, 184, 186, 0.05);
+  -fx-border-color: transparent transparent -cd-border transparent;
+}
+
+.container-card {
+  -fx-background-color: transparent;
+}
+
+.container-card-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+  -fx-font-weight: bold;
+}
+
+.container-card-meta {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+.container-bar-type {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 9px;
+}
+
+.container-bar-label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 9px;
+  -fx-min-width: 36px;
+}
+
+/* Thin 3px progress bars */
+.container-cpu-bar,
+.container-mem-bar {
+  -fx-min-height: 3px;
+  -fx-max-height: 3px;
+  -fx-pref-height: 3px;
+  -fx-background-color: transparent;
+}
+
+.container-cpu-bar .track,
+.container-mem-bar .track {
+  -fx-background-color: rgba(255, 255, 255, 0.06);
+  -fx-background-radius: 2;
+  -fx-background-insets: 0;
+  -fx-padding: 0;
+}
+
+.container-cpu-bar .bar {
+  -fx-background-color: #7eb8ba;
+  -fx-background-radius: 2;
+  -fx-background-insets: 0;
+  -fx-padding: 0;
+}
+
+.container-mem-bar .bar {
+  -fx-background-color: #a0a0b0;
+  -fx-background-radius: 2;
+  -fx-background-insets: 0;
+  -fx-padding: 0;
+}
+
+.button-start {
+  -fx-background-color: rgba(133, 196, 145, 0.12);
+  -fx-text-fill: -cd-success;
+  -fx-border-color: rgba(133, 196, 145, 0.25);
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-padding: 3 9 3 9;
+  -fx-font-size: 10px;
+  -fx-cursor: hand;
+}
+
+.button-start:hover {
+  -fx-background-color: rgba(133, 196, 145, 0.22);
+  -fx-border-color: rgba(133, 196, 145, 0.4);
+}
+
+.button-logs {
+  -fx-background-color: rgba(126, 184, 186, 0.1);
+  -fx-text-fill: -cd-accent;
+  -fx-border-color: rgba(126, 184, 186, 0.22);
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-padding: 3 9 3 9;
+  -fx-font-size: 10px;
+}
+
+.button-logs:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.18);
+  -fx-border-color: rgba(126, 184, 186, 0.38);
+}
+
+/* ============================================================
+   Container logs tab
+   ============================================================ */
+
+.logs-root {
+  -fx-background-color: -cd-bg;
+}
+
+.logs-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+}
+
+.logs-title {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+}
+
+.logs-view {
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-text-fill: -cd-fg;
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent;
+  -fx-control-inner-background: -cd-bg;
+  -fx-highlight-fill: rgba(126, 184, 186, 0.30);
+  -fx-highlight-text-fill: -cd-fg;
+}
+
+.logs-view .content {
+  -fx-background-color: -cd-bg;
+  -fx-padding: 6 14;
+}
+
+.logs-view > .scroll-pane {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent;
+}
+
+.logs-view > .scroll-pane > .scroll-bar:vertical {
+  -fx-background-color: transparent;
+}
+
+.logs-view > .scroll-pane > .scroll-bar:horizontal {
+  -fx-background-color: transparent;
+}
+
+/* ============================================================
+   Docker panel — tree / section layout
+   ============================================================ */
+
+.docker-scroll {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-background: -cd-bg-alt;
+}
+
+.docker-scroll > .viewport {
+  -fx-background-color: transparent;
+}
+
+.docker-content {
+  -fx-background-color: transparent;
+}
+
+/* Section container */
+.docker-section {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+}
+
+/* Section header row */
+.docker-section-header {
+  -fx-background-color: -cd-bg-alt;
+  -fx-cursor: hand;
+}
+
+.docker-section-header:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.docker-section-arrow {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+.docker-section-title {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+  -fx-font-weight: bold;
+}
+
+.docker-section-badge {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 9px;
+  -fx-background-color: -cd-bg-highlight;
+  -fx-background-radius: 100;
+  -fx-padding: 2 7 2 7;
+}
+
+.docker-section-prune-btn {
+  -fx-font-family: 'JetBrains Mono', monospace;
+  -fx-font-size: 9px;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 3;
+  -fx-padding: 1 6 1 6;
+  -fx-cursor: hand;
+}
+
+.docker-section-prune-btn:hover {
+  -fx-text-fill: -cd-error;
+  -fx-border-color: rgba(212, 126, 126, 0.4);
+  -fx-background-color: rgba(212, 126, 126, 0.07);
+}
+
+/* Section items container */
+.docker-section-items {
+  -fx-background-color: transparent;
+}
+
+/* Generic item row */
+.docker-item-row {
+  -fx-background-color: transparent;
+  -fx-cursor: hand;
+}
+
+.docker-item-row:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+}
+
+.docker-item-selected {
+  -fx-background-color: rgba(126, 184, 186, 0.08);
+}
+
+/* Status dot */
+.docker-item-dot {
+  -fx-min-width: 7px;
+  -fx-max-width: 7px;
+  -fx-min-height: 7px;
+  -fx-max-height: 7px;
+  -fx-background-radius: 100;
+}
+
+.docker-dot-running {
+  -fx-background-color: -cd-success;
+}
+
+.docker-dot-warning {
+  -fx-background-color: -cd-warning;
+}
+
+.docker-dot-stopped {
+  -fx-background-color: -cd-fg-dim2;
+}
+
+/* Item labels */
+.docker-item-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 12px;
+}
+
+.docker-item-name-dim {
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.docker-item-meta {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+}
+
+.docker-item-icon {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 11px;
+}
+
+/* Docker panel header toolbar buttons */
+.docker-toolbar-btn {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 8px;
+  -fx-background-radius: 8px;
+  -fx-font-size: 13px;
+  -fx-padding: 5 10 5 10;
+  -fx-cursor: hand;
+  -fx-min-width: 34px;
+  -fx-min-height: 34px;
+}
+
+.docker-toolbar-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-text-fill: -cd-fg;
+}
+
+.docker-toolbar-btn:pressed {
+  -fx-background-color: rgba(255, 255, 255, 0.13);
+}
+
+/* Container row hover action buttons */
+.docker-action-btn {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 5px;
+  -fx-background-radius: 5px;
+  -fx-font-size: 11px;
+  -fx-padding: 3 7 3 7;
+  -fx-cursor: hand;
+  -fx-min-width: 28px;
+  -fx-min-height: 22px;
+}
+
+.docker-action-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.08);
+  -fx-border-color: -cd-border2;
+  -fx-text-fill: -cd-fg;
+}
+
+.docker-action-btn:disabled {
+  -fx-opacity: 0.3;
+  -fx-cursor: default;
+}
+
+.docker-action-stop {
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-stop:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-border-color: rgba(212, 126, 126, 0.3);
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-start {
+  -fx-text-fill: -cd-success;
+}
+
+.docker-action-start:hover {
+  -fx-background-color: rgba(133, 196, 145, 0.12);
+  -fx-border-color: rgba(133, 196, 145, 0.3);
+  -fx-text-fill: -cd-success;
+}
+
+.docker-action-remove {
+  -fx-text-fill: -cd-error;
+}
+
+.docker-action-remove:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-border-color: rgba(212, 126, 126, 0.3);
+  -fx-text-fill: -cd-error;
+}
+
+/* ── SSH tab split panes ──────────────────────────────────────────────────── */
+
+.ssh-tab-layout {
+  -fx-background-color: -cd-bg;
+}
+
+.pane-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 4 8 4 8;
+}
+
+.split-btn {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border2;
+  -fx-border-radius: 4;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-padding: 3 10 3 10;
+  -fx-cursor: hand;
+}
+
+.split-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.05);
+  -fx-text-fill: -cd-fg;
+}
+
+.pane-header {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-padding: 2 4 2 4;
+}
+
+.pane-header-btn {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 12px;
+  -fx-padding: 0 5 0 5;
+  -fx-cursor: hand;
+  -fx-min-width: 20;
+  -fx-border-color: transparent;
+}
+
+.pane-header-btn:hover {
+  -fx-background-color: rgba(255, 255, 255, 0.06);
+  -fx-text-fill: -cd-fg;
+}
+
+.pane-split-btn {
+  -fx-font-size: 11px;
+  -fx-text-fill: -cd-fg-dim;
+}
+
+.pane-split-btn:hover {
+  -fx-text-fill: -cd-accent;
+}
+
+.pane-drag-handle {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 12px;
+  -fx-padding: 0 4 0 2;
+  -fx-cursor: move;
+}
+
+.pane-drag-handle:hover {
+  -fx-text-fill: -cd-fg;
+}
+
+/* Highlighted when a pane is being dragged over this slot */
+.pane-drop-target {
+  -fx-border-color: -cd-accent;
+  -fx-border-width: 2;
+  -fx-border-radius: 2;
+}
+
+.pane-close-btn {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 13px;
+  -fx-padding: 0 4 0 4;
+  -fx-cursor: hand;
+  -fx-min-width: 20;
+}
+
+.pane-close-btn:hover {
+  -fx-text-fill: -cd-error;
+}
+
+/* ── Docker panel host sub-headers ────────────────────────────────────────── */
+
+.docker-host-header {
+  -fx-background-color: rgba(255, 255, 255, 0.03);
+  -fx-border-color: transparent transparent -cd-border transparent;
+  -fx-border-width: 0 0 1 0;
+  -fx-cursor: hand;
+}
+
+.docker-host-header:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.06);
+}
+
+.docker-host-arrow {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+.docker-host-name {
+  -fx-text-fill: -cd-accent;
+  -fx-font-size: 11px;
+}
+
+.docker-host-addr {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 10px;
+}
+
+/* ── Split-pane host picker ────────────────────────────────────────────────── */
+
+.host-picker {
+  -fx-background-color: -cd-bg;
+}
+
+.host-picker-card {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 6;
+  -fx-background-radius: 6;
+  -fx-padding: 24 28 24 28;
+  -fx-spacing: 12;
+}
+
+.host-picker-title {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 13px;
+  -fx-padding: 0 0 4 0;
+}
+
+.picker-connect-btn {
+  -fx-background-color: -cd-accent;
+  -fx-background-radius: 4;
+  -fx-border-radius: 4;
+  -fx-text-fill: -cd-bg;
+  -fx-font-size: 12px;
+  -fx-padding: 7 0 7 0;
+  -fx-cursor: hand;
+}
+
+.picker-connect-btn:hover {
+  -fx-background-color: -cd-cyan;
+}
+
+/* ── Host picker ComboBox ──────────────────────────────────────────────────── */
+
+.host-picker-card .combo-box {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-padding: 0;
+}
+
+.host-picker-card .combo-box:focused,
+.host-picker-card .combo-box:showing {
+  -fx-border-color: -cd-accent;
+}
+
+.host-picker-card .combo-box .list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+  -fx-padding: 6 10 6 10;
+  -fx-font-size: 12px;
+}
+
+.host-picker-card .combo-box .list-cell:empty {
+  -fx-background-color: transparent;
+}
+
+.host-picker-card .combo-box .arrow-button {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 0 8 0 0;
+}
+
+.host-picker-card .combo-box .arrow {
+  -fx-background-color: -cd-fg-dim;
+  -fx-mark-color: -cd-fg-dim;
+}
+
+/* Popup dropdown list */
+.combo-box-popup .list-view {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 12, 0, 0, 4);
+  -fx-padding: 4 0 4 0;
+}
+
+.combo-box-popup .list-cell {
+  -fx-background-color: transparent;
+  -fx-text-fill: -cd-fg;
+  -fx-padding: 7 12 7 12;
+  -fx-font-size: 12px;
+  -fx-border-color: transparent;
+  -fx-cursor: hand;
+}
+
+.combo-box-popup .list-cell:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.08);
+  -fx-text-fill: -cd-fg;
+}
+
+.combo-box-popup .list-cell:selected,
+.combo-box-popup .list-cell:focused {
+  -fx-background-color: rgba(126, 184, 186, 0.15);
+  -fx-text-fill: -cd-accent;
+}
+
+.combo-box-popup .list-cell:empty {
+  -fx-background-color: transparent;
+}
+
+/* ── Reconnect overlay (shown on LOST state) ──────────────────────────────── */
+
+.reconnect-overlay {
+  -fx-background-color: rgba(22, 22, 22, 0.88);
+}
+
+.reconnect-icon {
+  -fx-text-fill: -cd-warning;
+  -fx-font-size: 32px;
+}
+
+.reconnect-message {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 13px;
+}
+
+.reconnect-btn {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-accent;
+  -fx-border-radius: 4;
+  -fx-text-fill: -cd-accent;
+  -fx-padding: 6 18 6 18;
+  -fx-cursor: hand;
+}
+
+.reconnect-btn:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.10);
+}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>{{XTERM_CSS}}</style>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; }
+    #terminal { width: 100%; height: 100%; padding: 4px; }
+    .xterm { height: 100%; }
+    .xterm-viewport { background: #0d1117 !important; }
+  </style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>{{XTERM_JS}}</script>
+<script>
+  const term = new Terminal({
+    theme: {
+      background:    '#0d1117',
+      foreground:    '#e6edf3',
+      cursor:        '#58a6ff',
+      cursorAccent:  '#0d1117',
+      selectionBackground: '#264f7899',
+      // Normal ANSI colors 0–7
+      black:         '#1c2128',
+      red:           '#ff5555',
+      green:         '#3fb950',
+      yellow:        '#d29922',
+      blue:          '#388bfd',
+      magenta:       '#a371f7',
+      cyan:          '#39c5cf',
+      white:         '#e6edf3',
+      // Bright ANSI colors 8–15
+      brightBlack:   '#484f58',
+      brightRed:     '#ff7b72',
+      brightGreen:   '#56d364',
+      brightYellow:  '#e3b341',
+      brightBlue:    '#79c0ff',
+      brightMagenta: '#d2a8ff',
+      brightCyan:    '#56d4dc',
+      brightWhite:   '#ffffff',
+    },
+    fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", monospace',
+    fontSize: 13,
+    lineHeight: 1.2,
+    cursorBlink: true,
+    cursorStyle: 'block',
+    scrollback: 5000,
+    allowTransparency: false,
+    convertEol: false,
+  });
+
+  term.open(document.getElementById('terminal'));
+
+  // Forward keystrokes and clipboard pastes to Java
+  term.onData(data => {
+    if (window.javaTerminal) {
+      window.javaTerminal.sendInput(data);
+    }
+  });
+
+  // Copy selected text to the system clipboard via the Java bridge.
+  // navigator.clipboard is unavailable in WebView (no secure context).
+  term.onSelectionChange(() => {
+    const sel = term.getSelection();
+    if (sel && window.javaTerminal) {
+      window.javaTerminal.copyToClipboard(sel);
+    }
+  });
+
+  // Sends the current terminal size to the SSH PTY.
+  // Called explicitly after javaTerminal is registered (initial sync).
+  function notifyResize() {
+    if (window.javaTerminal) {
+      window.javaTerminal.resize(term.cols, term.rows);
+    }
+  }
+
+  // PTY resize is debounced independently from the visual resize.
+  // xterm.js adapts immediately on term.resize(), but the SIGWINCH is only sent
+  // to the server once the size has been stable for 300 ms. This prevents the shell
+  // from reflowing its output at a tiny intermediate size while the user is still
+  // dragging the split pane — those wrapped lines would otherwise stay in the
+  // scrollback buffer and remain garbled after the pane is expanded again.
+  let ptyResizeTimer = null;
+  term.onResize(() => {
+    clearTimeout(ptyResizeTimer);
+    ptyResizeTimer = setTimeout(notifyResize, 300);
+  });
+
+  // Recalculate cols/rows from pixel dimensions when the container changes size.
+  const MIN_COLS = 10;
+  const MIN_ROWS = 3;
+
+  function fitTerminal() {
+    const container = document.getElementById('terminal');
+    const dims = term._core._renderService.dimensions.css.cell;
+    const charWidth  = dims ? dims.width  : 0;
+    const charHeight = dims ? dims.height : 0;
+    if (charWidth > 0 && charHeight > 0) {
+      const cols = Math.max(MIN_COLS, Math.floor(container.clientWidth  / charWidth));
+      const rows = Math.max(MIN_ROWS, Math.floor(container.clientHeight / charHeight));
+      if (cols !== term.cols || rows !== term.rows) {
+        term.resize(cols, rows);
+      }
+    }
+  }
+
+  // Visual resize is debounced at 100 ms — short enough to feel responsive,
+  // long enough to skip intermediate frames while dragging.
+  let visualResizeTimer = null;
+  const resizeObserver = new ResizeObserver(() => {
+    clearTimeout(visualResizeTimer);
+    visualResizeTimer = setTimeout(fitTerminal, 100);
+  });
+  resizeObserver.observe(document.getElementById('terminal'));
+
+  // Expose for Java to call term.write()
+  window.term = term;
+</script>
+</body>
+</html>

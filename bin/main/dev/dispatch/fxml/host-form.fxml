@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox
+    xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="dev.dispatch.ui.host.HostFormController"
+    styleClass="host-form"
+    spacing="14"
+    minWidth="380">
+
+  <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+  <GridPane hgap="12" vgap="10">
+    <columnConstraints>
+      <ColumnConstraints minWidth="90" prefWidth="90"/>
+      <ColumnConstraints hgrow="ALWAYS"/>
+    </columnConstraints>
+
+    <Label text="Name" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+    <TextField fx:id="nameField" GridPane.rowIndex="0" GridPane.columnIndex="1"
+               promptText="e.g. Raspberry Pi"/>
+
+    <Label text="Hostname" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+    <TextField fx:id="hostnameField" GridPane.rowIndex="1" GridPane.columnIndex="1"
+               promptText="e.g. 192.168.1.100"/>
+
+    <Label text="Port" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+    <TextField fx:id="portField" GridPane.rowIndex="2" GridPane.columnIndex="1"
+               promptText="22" prefWidth="80" maxWidth="80"/>
+
+    <Label text="Username" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+    <TextField fx:id="usernameField" GridPane.rowIndex="3" GridPane.columnIndex="1"
+               promptText="e.g. pi"/>
+
+    <Label text="Auth" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+    <HBox spacing="16" GridPane.rowIndex="4" GridPane.columnIndex="1" alignment="CENTER_LEFT">
+      <fx:define>
+        <ToggleGroup fx:id="authGroup"/>
+      </fx:define>
+      <RadioButton fx:id="passwordRadio" text="Password" toggleGroup="$authGroup"
+                   onAction="#onAuthTypeChanged"/>
+      <RadioButton fx:id="keyRadio" text="SSH Key" toggleGroup="$authGroup"
+                   onAction="#onAuthTypeChanged"/>
+    </HBox>
+
+    <Label text="Key path" GridPane.rowIndex="5" GridPane.columnIndex="0"
+           styleClass="form-label" fx:id="keyPathLabel"/>
+    <HBox spacing="6" GridPane.rowIndex="5" GridPane.columnIndex="1" fx:id="keyPathRow">
+      <TextField fx:id="keyPathField" HBox.hgrow="ALWAYS" promptText="~/.ssh/id_rsa"/>
+      <Button text="Browse" onAction="#onBrowseKey"/>
+    </HBox>
+
+  </GridPane>
+
+  <Label fx:id="errorLabel" styleClass="form-error" wrapText="true" managed="false" visible="false"/>
+
+  <HBox spacing="8" alignment="CENTER_RIGHT">
+    <padding><Insets top="4"/></padding>
+    <Button text="Cancel" onAction="#onCancel" prefWidth="80"/>
+    <Button fx:id="saveButton" text="Save" onAction="#onSave" styleClass="button-accent" prefWidth="80"/>
+  </HBox>
+
+</VBox>
