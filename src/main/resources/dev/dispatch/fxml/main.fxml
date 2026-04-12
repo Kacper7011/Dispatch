@@ -61,7 +61,7 @@
       <padding><Insets top="0" right="16" bottom="0" left="16"/></padding>
       <Region HBox.hgrow="ALWAYS"/>
       <Label text="Java 21  ·  Virtual Threads" styleClass="status-item"/>
-      <Label text="v0.1.0" styleClass="status-item"/>
+      <Label text="v1.0.0" styleClass="status-item"/>
     </HBox>
   </bottom>
 

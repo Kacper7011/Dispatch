@@ -6,11 +6,19 @@ import dev.dispatch.ssh.SshService;
 import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.ui.MainController;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Taskbar;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import javax.imageio.ImageIO;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -58,6 +66,7 @@ public class App extends Application {
     }
 
     stage.setScene(scene);
+    loadIcon(stage, isMac);
 
     MainController ctrl = loader.getController();
     ctrl.init(dbManager, sshService, tunnelService, stage);
@@ -73,6 +82,76 @@ public class App extends Application {
     if (tunnelService != null) tunnelService.close();
     if (sshService != null) sshService.close();
     if (dbManager != null) dbManager.close();
+  }
+
+  /**
+   * Sets the application icon on all platforms.
+   *
+   * <p>Loads the source PNG once, then generates multiple pre-scaled variants so that the OS can
+   * pick the sharpest match for each context (window chrome ~16 px, taskbar ~32–48 px, Alt+Tab
+   * ~128 px). A single icon forces the OS to downscale with a low-quality algorithm, producing a
+   * blurry or apparently small icon.
+   *
+   * <p>On macOS the stage icon list is ignored by the OS; the dock icon is set via the AWT {@link
+   * Taskbar} API instead.
+   */
+  private void loadIcon(Stage stage, boolean isMac) {
+    byte[] iconBytes = loadIconBytes();
+    if (iconBytes == null) return;
+
+    for (int size : new int[] {16, 32, 48, 128, 256, 512}) {
+      Image scaled = scaledFxImage(iconBytes, size);
+      if (scaled != null) stage.getIcons().add(scaled);
+    }
+
+    if (isMac) {
+      try {
+        BufferedImage awtIcon = ImageIO.read(new ByteArrayInputStream(iconBytes));
+        Taskbar.getTaskbar().setIconImage(awtIcon);
+      } catch (UnsupportedOperationException ignored) {
+        // Taskbar.setIconImage not supported on this macOS JVM — no-op
+      } catch (Exception e) {
+        log.warn("Could not set macOS dock icon: {}", e.getMessage());
+      }
+    }
+  }
+
+  /** Reads {@code /img/dispatch.png} into a byte array for reuse across multiple scalings. */
+  private byte[] loadIconBytes() {
+    try (InputStream s = getClass().getResourceAsStream("/img/dispatch.png")) {
+      if (s == null) {
+        log.warn("Application icon not found at /img/dispatch.png");
+        return null;
+      }
+      return s.readAllBytes();
+    } catch (Exception e) {
+      log.warn("Failed to read application icon: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Scales the source PNG bytes to a square of the requested size using bicubic interpolation and
+   * re-encodes it as PNG bytes so that JavaFX can consume it without the {@code javafx.swing}
+   * module bridge.
+   */
+  private Image scaledFxImage(byte[] pngBytes, int size) {
+    try {
+      BufferedImage src = ImageIO.read(new ByteArrayInputStream(pngBytes));
+      BufferedImage dst = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+      Graphics2D g = dst.createGraphics();
+      g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+      g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+      g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      g.drawImage(src, 0, 0, size, size, null);
+      g.dispose();
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      ImageIO.write(dst, "png", out);
+      return new Image(new ByteArrayInputStream(out.toByteArray()));
+    } catch (Exception e) {
+      log.warn("Could not scale icon to {}px: {}", size, e.getMessage());
+      return null;
+    }
   }
 
   /**
