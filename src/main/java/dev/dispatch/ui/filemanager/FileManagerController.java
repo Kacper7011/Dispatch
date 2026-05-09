@@ -50,6 +50,10 @@ public class FileManagerController {
       Node root = loader.load();
       leftPanelController.init(leftSession, () -> setActive(leftPanelController));
       rightPanelController.init(rightSession, () -> setActive(rightPanelController));
+      leftPanelController.installContextMenu(
+          this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
+      rightPanelController.installContextMenu(
+          this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       setActive(leftPanelController);
       root.setOnKeyPressed(this::handleKey);
       return root;

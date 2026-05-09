@@ -9,12 +9,17 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseButton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,6 +118,56 @@ public class FilePanelController {
   /** Full path of the directory currently displayed in this panel. */
   public String getCurrentPath() {
     return currentPath;
+  }
+
+  /**
+   * Attaches a right-click context menu to every non-empty table row.
+   * Actions are wired to callbacks provided by {@link FileManagerController}.
+   * Must be called after {@link #init}.
+   */
+  public void installContextMenu(
+      Runnable copy, Runnable move, Runnable mkdir, Runnable delete, Runnable rename) {
+    MenuItem copyItem   = new MenuItem("Kopiuj do drugiego panelu  F5");
+    MenuItem moveItem   = new MenuItem("Przenieś do drugiego panelu  F6");
+    MenuItem mkdirItem  = new MenuItem("Nowy katalog  F7");
+    MenuItem deleteItem = new MenuItem("Usuń  F8");
+    MenuItem renameItem = new MenuItem("Zmień nazwę  F9");
+
+    copyItem.setOnAction(e -> copy.run());
+    moveItem.setOnAction(e -> move.run());
+    mkdirItem.setOnAction(e -> mkdir.run());
+    deleteItem.setOnAction(e -> delete.run());
+    renameItem.setOnAction(e -> rename.run());
+
+    ContextMenu menu = new ContextMenu(
+        copyItem, moveItem,
+        new SeparatorMenuItem(),
+        mkdirItem,
+        new SeparatorMenuItem(),
+        deleteItem, renameItem);
+
+    fileTable.setRowFactory(tv -> {
+      TableRow<FileEntryRow> row = new TableRow<>();
+      row.setOnMousePressed(e -> {
+        if (e.getButton() == MouseButton.SECONDARY && !row.isEmpty()) {
+          if (onActivated != null) onActivated.run();
+          if (!fileTable.getSelectionModel().isSelected(row.getIndex())) {
+            fileTable.getSelectionModel().clearAndSelect(row.getIndex());
+          }
+          boolean hasSelection = !getSelectedEntries().isEmpty();
+          boolean singleFile   = getSelectedEntries().size() == 1;
+          copyItem.setDisable(!hasSelection);
+          moveItem.setDisable(!hasSelection);
+          deleteItem.setDisable(!hasSelection);
+          renameItem.setDisable(!singleFile);
+          menu.show(row, e.getScreenX(), e.getScreenY());
+          e.consume();
+        } else {
+          menu.hide();
+        }
+      });
+      return row;
+    });
   }
 
   @FXML
