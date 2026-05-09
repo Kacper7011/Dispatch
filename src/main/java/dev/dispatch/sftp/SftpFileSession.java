@@ -178,6 +178,15 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
   }
 
   @Override
+  public String realpath(String path) {
+    try {
+      return sftp.realpath(path);
+    } catch (SftpException e) {
+      return path;
+    }
+  }
+
+  @Override
   public void close() {
     if (sftp.isConnected()) {
       sftp.disconnect();

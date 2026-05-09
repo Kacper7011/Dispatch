@@ -174,6 +174,15 @@ public final class LocalFileSession implements FileSession {
   }
 
   @Override
+  public String realpath(String path) {
+    try {
+      return Paths.get(path).toRealPath().toString();
+    } catch (IOException e) {
+      return path;
+    }
+  }
+
+  @Override
   public void close() {}
 
   private long sizeQuietly(Path path) {

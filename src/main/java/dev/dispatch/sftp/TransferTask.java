@@ -5,7 +5,8 @@ import io.reactivex.rxjava3.core.ObservableEmitter;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
@@ -126,16 +127,29 @@ public final class TransferTask {
   }
 
   private void transferDirectory(ObservableEmitter<TransferProgress> emitter) throws IOException {
-    if (!dest.isDirectory(destPath)) {
-      dest.mkdir(destPath);
+    Set<String> visited = new HashSet<>();
+    visited.add(src.realpath(srcPath));
+    copyDir(srcPath, destPath, emitter, visited);
+  }
+
+  private void copyDir(
+      String fromDir, String toDir,
+      ObservableEmitter<TransferProgress> emitter,
+      Set<String> visited) throws IOException {
+    if (!dest.isDirectory(toDir)) {
+      dest.mkdir(toDir);
     }
-    List<FileEntry> entries = src.list(srcPath);
-    for (FileEntry entry : entries) {
+    for (FileEntry entry : src.list(fromDir)) {
       if (cancelled.get() || emitter.isDisposed()) return;
       if (entry.isParentLink() || entry.isSymlink()) continue;
-      String childDest = destPath + "/" + entry.getName();
+      String childDest = toDir + "/" + entry.getName();
       if (entry.isDirectory()) {
-        new TransferTask(src, entry.getPath(), dest, childDest).start().blockingSubscribe();
+        String realChild = src.realpath(entry.getPath());
+        if (!visited.add(realChild)) {
+          log.warn("Symlink cycle detected, skipping: {}", entry.getPath());
+          continue;
+        }
+        copyDir(entry.getPath(), childDest, emitter, visited);
       } else {
         transferFile(entry.getPath(), childDest, emitter);
       }

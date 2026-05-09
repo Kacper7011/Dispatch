@@ -82,6 +82,15 @@ public interface FileSession extends AutoCloseable {
    */
   String sessionId();
 
+  /**
+   * Resolves the canonical (real) absolute path — follows symlinks.
+   * Used by {@link dev.dispatch.sftp.TransferTask} to detect symlink cycles during
+   * directory copies. Implementations that cannot resolve paths may return {@code path} unchanged.
+   */
+  default String realpath(String path) {
+    return path;
+  }
+
   /** Releases all resources held by this session. Never throws. */
   @Override
   void close();
