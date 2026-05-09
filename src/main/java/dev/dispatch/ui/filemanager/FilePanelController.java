@@ -3,12 +3,17 @@ package dev.dispatch.ui.filemanager;
 import dev.dispatch.sftp.FileEntry;
 import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
+import dev.dispatch.sftp.TransferTask;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.List;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -19,7 +24,11 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.TransferMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,6 +177,94 @@ public class FilePanelController {
       });
       return row;
     });
+  }
+
+  /**
+   * Sets up drag-and-drop on this panel. Must be called after {@link #init} and
+   * {@link #installContextMenu}.
+   *
+   * <p>Logic: same session instance → move; different sessions → copy.
+   */
+  public void installDragAndDrop() {
+    fileTable.setOnDragDetected(e -> {
+      List<FileEntry> sel = getSelectedEntries();
+      if (sel.isEmpty()) return;
+      FileDragContext.start(sel, session, this);
+      Dragboard db = fileTable.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+      ClipboardContent cc = new ClipboardContent();
+      cc.putString(sel.stream().map(FileEntry::getName).collect(Collectors.joining(", ")));
+      db.setContent(cc);
+      e.consume();
+    });
+
+    fileTable.setOnDragOver(e -> {
+      if (FileDragContext.isActive() && e.getGestureSource() != fileTable) {
+        e.acceptTransferModes(
+            FileDragContext.isSameSession(session) ? TransferMode.MOVE : TransferMode.COPY);
+        e.consume();
+      }
+    });
+
+    fileTable.setOnDragEntered(e -> {
+      if (FileDragContext.isActive() && e.getGestureSource() != fileTable)
+        fileTable.getStyleClass().add("file-panel-drag-target");
+    });
+
+    fileTable.setOnDragExited(e ->
+        fileTable.getStyleClass().remove("file-panel-drag-target"));
+
+    fileTable.setOnDragDropped(e -> {
+      if (!FileDragContext.isActive()) { e.setDropCompleted(false); return; }
+      boolean move = FileDragContext.isSameSession(session);
+      String destDir = resolveDropDir(e);
+      List<FileEntry> dragged = FileDragContext.entries;
+      FileSession srcSession = FileDragContext.sourceSession;
+      FilePanelController srcPanel = FileDragContext.sourcePanel;
+      FileDragContext.clear();
+      fileTable.getStyleClass().remove("file-panel-drag-target");
+      for (FileEntry entry : dragged) {
+        String destPath = destDir + "/" + entry.getName();
+        new TransferTask(srcSession, entry.getPath(), session, destPath)
+            .start()
+            .subscribeOn(Schedulers.io())
+            .subscribe(
+                p -> {},
+                err -> {
+                  log.error("DnD transfer failed: {}", entry.getPath(), err);
+                  Platform.runLater(() ->
+                      new Alert(Alert.AlertType.ERROR, err.getMessage(), ButtonType.OK)
+                          .showAndWait());
+                },
+                () -> {
+                  if (move) {
+                    try { srcSession.delete(entry.getPath(), true); }
+                    catch (SftpException ex) { log.error("DnD delete failed", ex); }
+                  }
+                  Platform.runLater(() -> {
+                    refresh();
+                    if (srcPanel != this) srcPanel.refresh();
+                  });
+                });
+      }
+      e.setDropCompleted(true);
+      e.consume();
+    });
+
+    fileTable.setOnDragDone(e -> FileDragContext.clear());
+  }
+
+  private String resolveDropDir(DragEvent e) {
+    Node picked = e.getPickResult().getIntersectedNode();
+    while (picked != null) {
+      if (picked instanceof TableRow<?> row && !row.isEmpty()
+          && row.getItem() instanceof FileEntryRow fer) {
+        FileEntry entry = fer.getEntry();
+        if (entry.isDirectory() && !entry.isParentLink()) return entry.getPath();
+        break;
+      }
+      picked = picked.getParent();
+    }
+    return currentPath;
   }
 
   @FXML

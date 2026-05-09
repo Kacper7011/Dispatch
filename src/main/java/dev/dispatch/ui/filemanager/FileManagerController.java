@@ -54,6 +54,8 @@ public class FileManagerController {
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       rightPanelController.installContextMenu(
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
+      leftPanelController.installDragAndDrop();
+      rightPanelController.installDragAndDrop();
       setActive(leftPanelController);
       root.setOnKeyPressed(this::handleKey);
       return root;

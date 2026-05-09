@@ -1449,3 +1449,9 @@
   -fx-border-color: -cd-accent transparent transparent transparent;
   -fx-border-width: 2 0 0 0;
 }
+
+.file-table.file-panel-drag-target {
+  -fx-border-color: -cd-accent;
+  -fx-border-width: 2;
+  -fx-effect: dropshadow(gaussian, rgba(126,184,186,0.35), 8, 0, 0, 0);
+}
