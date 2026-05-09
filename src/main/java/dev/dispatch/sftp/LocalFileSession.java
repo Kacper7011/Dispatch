@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -165,7 +166,11 @@ public final class LocalFileSession implements FileSession {
 
   @Override
   public String displayName() {
-    return "Local";
+    try {
+      return InetAddress.getLocalHost().getHostName();
+    } catch (Exception e) {
+      return "Local";
+    }
   }
 
   @Override

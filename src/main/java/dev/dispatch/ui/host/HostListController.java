@@ -45,7 +45,7 @@ public class HostListController {
 
   private HostRepository hostRepository;
   private EventHandler<ActionEvent> connectHandler;
-  private java.util.function.Consumer<Host> fileManagerHandler;
+  private Runnable openFileManagerHandler;
   private final ObservableList<Host> hosts = FXCollections.observableArrayList();
   private final Map<Long, SessionState> sessionStates = new ConcurrentHashMap<>();
 
@@ -74,9 +74,9 @@ public class HostListController {
     this.connectHandler = handler;
   }
 
-  /** Allows MainController to open a file manager tab for a connected host. */
-  public void setOnOpenFileManager(java.util.function.Consumer<Host> handler) {
-    this.fileManagerHandler = handler;
+  /** Allows MainController to open the file manager dialog. */
+  public void setOnOpenFileManager(Runnable handler) {
+    this.openFileManagerHandler = handler;
   }
 
   /** Returns the currently selected host, or null. */
@@ -115,36 +115,24 @@ public class HostListController {
 
   private void setupContextMenu() {
     MenuItem connectItem = new MenuItem("Connect");
-    MenuItem fileManagerItem = new MenuItem("Open File Manager");
     MenuItem editItem = new MenuItem("Edit");
     MenuItem deleteItem = new MenuItem("Delete");
 
     connectItem.setOnAction(e -> fireConnect());
-    fileManagerItem.setOnAction(e -> {
-      Host selected = getSelectedHost();
-      if (selected != null && fileManagerHandler != null
-          && sessionStates.getOrDefault(selected.getId(), SessionState.DISCONNECTED)
-              == SessionState.CONNECTED) {
-        fileManagerHandler.accept(selected);
-      }
-    });
     editItem.setOnAction(e -> {
       Host selected = getSelectedHost();
       if (selected != null) openForm(selected);
     });
     deleteItem.setOnAction(e -> confirmAndDelete());
 
-    hostListView.setOnContextMenuRequested(e -> {
-      Host selected = getSelectedHost();
-      boolean connected = selected != null
-          && sessionStates.getOrDefault(selected.getId(), SessionState.DISCONNECTED)
-              == SessionState.CONNECTED;
-      fileManagerItem.setDisable(!connected);
-    });
-
     ContextMenu menu = new ContextMenu(
-        connectItem, fileManagerItem, new SeparatorMenuItem(), editItem, deleteItem);
+        connectItem, new SeparatorMenuItem(), editItem, deleteItem);
     hostListView.setContextMenu(menu);
+  }
+
+  @FXML
+  private void onOpenFileManager() {
+    if (openFileManagerHandler != null) openFileManagerHandler.run();
   }
 
   private void fireConnect() {

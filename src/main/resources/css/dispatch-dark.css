@@ -394,6 +394,27 @@
   -fx-border-width: 1 0 0 0;
 }
 
+.sidebar-fm-btn {
+  -fx-background-color: rgba(126, 184, 186, 0.10);
+  -fx-text-fill: -cd-accent;
+  -fx-border-color: rgba(126, 184, 186, 0.25);
+  -fx-border-radius: 6;
+  -fx-background-radius: 6;
+  -fx-border-width: 1;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 12px;
+  -fx-cursor: hand;
+}
+
+.sidebar-fm-btn:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.18);
+  -fx-border-color: rgba(126, 184, 186, 0.45);
+}
+
+.sidebar-fm-btn:pressed {
+  -fx-background-color: rgba(126, 184, 186, 0.25);
+}
+
 .host-list {
   -fx-background-color: transparent;
   -fx-border-color: transparent;

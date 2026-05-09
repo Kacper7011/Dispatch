@@ -16,6 +16,7 @@ import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
 import dev.dispatch.storage.SessionRepository;
+import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.LocalFileSession;
 import dev.dispatch.sftp.SftpFileSession;
 import dev.dispatch.ui.docker.ContainerLogsController;
@@ -41,15 +42,22 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +126,7 @@ public class MainController {
     this.sessionRepository = new SessionRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
-    hostListController.setOnOpenFileManager(this::openFileManagerTab);
+    hostListController.setOnOpenFileManager(this::showFileManagerDialog);
 
     configureWindowControls();
     configureSplitPane();
@@ -547,26 +555,185 @@ public class MainController {
     log.info("Exec tab opened for {}", container.getName());
   }
 
-  private void openFileManagerTab(Host host) {
-    SshSession session = sshService.getSession(host.getId()).orElse(null);
-    if (session == null) return;
-    FileManagerController ctrl = new FileManagerController(
-        new SftpFileSession(session),
-        new LocalFileSession(),
-        () -> {
-          List<NamedSession> available = new ArrayList<>();
-          available.add(new NamedSession("Local", LocalFileSession::new));
-          sshService.getAllSessions().forEach(s ->
-              available.add(new NamedSession(s.getHost().getName(), () -> new SftpFileSession(s))));
-          return available;
+  private void showFileManagerDialog() {
+    String localName;
+    try (LocalFileSession tmp = new LocalFileSession()) {
+      localName = tmp.displayName();
+    }
+
+    List<PanelChoice> choices = new ArrayList<>();
+    choices.add(new PanelChoice(localName, true, null));
+    hostRepository.findAll().forEach(h ->
+        choices.add(new PanelChoice(
+            h.getName(), sshService.getSession(h.getId()).isPresent(), h)));
+
+    ComboBox<PanelChoice> leftBox = new ComboBox<>();
+    ComboBox<PanelChoice> rightBox = new ComboBox<>();
+    leftBox.getItems().addAll(choices);
+    rightBox.getItems().addAll(choices);
+
+    leftBox.setCellFactory(lv -> new ListCell<>() {
+      @Override protected void updateItem(PanelChoice c, boolean empty) {
+        super.updateItem(c, empty);
+        setText(empty || c == null ? null : c.displayLabel());
+      }
+    });
+    leftBox.setButtonCell(new ListCell<>() {
+      @Override protected void updateItem(PanelChoice c, boolean empty) {
+        super.updateItem(c, empty);
+        setText(empty || c == null ? null : c.displayLabel());
+      }
+    });
+    rightBox.setCellFactory(lv -> new ListCell<>() {
+      @Override protected void updateItem(PanelChoice c, boolean empty) {
+        super.updateItem(c, empty);
+        setText(empty || c == null ? null : c.displayLabel());
+      }
+    });
+    rightBox.setButtonCell(new ListCell<>() {
+      @Override protected void updateItem(PanelChoice c, boolean empty) {
+        super.updateItem(c, empty);
+        setText(empty || c == null ? null : c.displayLabel());
+      }
+    });
+
+    // Defaults: first host for left, local for right
+    leftBox.getSelectionModel().select(choices.size() > 1 ? 1 : 0);
+    rightBox.getSelectionModel().select(0);
+
+    GridPane grid = new GridPane();
+    grid.setHgap(14);
+    grid.setVgap(12);
+    grid.setPadding(new Insets(20, 24, 12, 24));
+    Label leftLbl = new Label("Left panel:");
+    Label rightLbl = new Label("Right panel:");
+    leftLbl.setMinWidth(90);
+    rightLbl.setMinWidth(90);
+    grid.add(leftLbl, 0, 0);
+    grid.add(leftBox, 1, 0);
+    grid.add(rightLbl, 0, 1);
+    grid.add(rightBox, 1, 1);
+    leftBox.setPrefWidth(260);
+    rightBox.setPrefWidth(260);
+
+    Dialog<ButtonType> dialog = new Dialog<>();
+    dialog.setTitle("Open File Manager");
+    dialog.initModality(Modality.APPLICATION_MODAL);
+    dialog.initOwner(stage);
+
+    DialogPane pane = dialog.getDialogPane();
+    pane.setContent(grid);
+    pane.setMinWidth(440);
+    pane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+    pane.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
+    pane.setStyle("-fx-background-color: #1c1c1c;");
+
+    dialog.showAndWait()
+        .filter(bt -> bt == ButtonType.OK)
+        .ifPresent(bt -> {
+          PanelChoice left = leftBox.getValue();
+          PanelChoice right = rightBox.getValue();
+          if (left == null || right == null) return;
+
+          // Gather credentials for offline hosts on the FX thread before switching to VT
+          Map<Long, SshCredentials> credMap = new java.util.LinkedHashMap<>();
+          for (PanelChoice choice : List.of(left, right)) {
+            if (choice.isLocal() || sshService.getSession(choice.host().getId()).isPresent()) continue;
+            Long hostId = choice.host().getId();
+            if (credMap.containsKey(hostId)) continue;
+            Host h = choice.host();
+            SshCredentials creds;
+            if (h.getAuthType() == dev.dispatch.core.model.AuthType.KEY && h.isKeyNoPassphrase()) {
+              creds = SshCredentials.keyNoPassphrase();
+            } else {
+              java.util.Optional<SshCredentials> prompted = CredentialDialog.prompt(h);
+              if (prompted.isEmpty()) return;
+              creds = prompted.get();
+            }
+            credMap.put(hostId, creds);
+          }
+
+          final PanelChoice fLeft = left;
+          final PanelChoice fRight = right;
+          Thread.ofVirtual().start(() -> {
+            try {
+              FileSession leftSess = resolveFileSession(fLeft, credMap);
+              FileSession rightSess = resolveFileSession(fRight, credMap);
+              String tabLabel = "files › " + fLeft.baseName() + " ↔ " + fRight.baseName();
+              Platform.runLater(() -> openFileManagerTab(leftSess, rightSess, tabLabel));
+            } catch (SshException e) {
+              log.error("Auto-connect for file manager failed", e);
+              Platform.runLater(() ->
+                  new Alert(Alert.AlertType.ERROR, "Connection failed: " + e.getMessage(),
+                      ButtonType.OK).showAndWait());
+            }
+          });
         });
-    Tab tab = new Tab("files › " + host.getName());
+  }
+
+  private FileSession resolveFileSession(PanelChoice choice, Map<Long, SshCredentials> credMap) {
+    if (choice.isLocal()) return new LocalFileSession();
+    SshSession existing = sshService.getSession(choice.host().getId()).orElse(null);
+    if (existing != null) return new SftpFileSession(existing);
+    SshSession session = sshService.connect(choice.host(), credMap.get(choice.host().getId()));
+    Platform.runLater(() ->
+        hostListController.updateHostState(choice.host().getId(), SessionState.CONNECTED));
+    return new SftpFileSession(session);
+  }
+
+  private List<NamedSession> buildAvailableSessions() {
+    List<NamedSession> list = new ArrayList<>();
+    String localName;
+    try (LocalFileSession tmp = new LocalFileSession()) {
+      localName = tmp.displayName();
+    }
+    list.add(new NamedSession(localName, onReady -> onReady.accept(new LocalFileSession())));
+    hostRepository.findAll().forEach(h -> {
+      SshSession existing = sshService.getSession(h.getId()).orElse(null);
+      if (existing != null) {
+        list.add(new NamedSession(h.getName(),
+            onReady -> onReady.accept(new SftpFileSession(existing))));
+      } else {
+        list.add(new NamedSession(h.getName() + " (offline)", onReady -> {
+          SshCredentials creds;
+          if (h.getAuthType() == dev.dispatch.core.model.AuthType.KEY && h.isKeyNoPassphrase()) {
+            creds = SshCredentials.keyNoPassphrase();
+          } else {
+            java.util.Optional<SshCredentials> prompted = CredentialDialog.prompt(h);
+            if (prompted.isEmpty()) return;
+            creds = prompted.get();
+          }
+          final SshCredentials finalCreds = creds;
+          Thread.ofVirtual().start(() -> {
+            try {
+              SshSession session = sshService.connect(h, finalCreds);
+              Platform.runLater(() -> {
+                hostListController.updateHostState(h.getId(), SessionState.CONNECTED);
+                onReady.accept(new SftpFileSession(session));
+              });
+            } catch (SshException e) {
+              log.error("Auto-connect for panel switch failed: {}", h.getName(), e);
+              Platform.runLater(() ->
+                  new Alert(Alert.AlertType.ERROR, "Connection failed: " + e.getMessage(),
+                      ButtonType.OK).showAndWait());
+            }
+          });
+        }));
+      }
+    });
+    return list;
+  }
+
+  private void openFileManagerTab(FileSession left, FileSession right, String tabLabel) {
+    FileManagerController ctrl = new FileManagerController(
+        left, right, this::buildAvailableSessions);
+    Tab tab = new Tab(tabLabel);
     tab.setContent(ctrl.createNode());
     tab.setOnClosed(e -> ctrl.dispose());
     sessionTabPane.getTabs().add(tab);
     sessionTabPane.getSelectionModel().select(tab);
     updateEmptyState();
-    log.info("File manager tab opened for {}", host.getName());
+    log.info("File manager tab opened: {}", tabLabel);
   }
 
   private void openLogsTab(ContainerInfo container, DockerService dockerService) {
@@ -629,5 +796,11 @@ public class MainController {
     boolean hasTabs = !sessionTabPane.getTabs().isEmpty();
     emptyStateLabel.setVisible(!hasTabs);
     emptyStateLabel.setManaged(!hasTabs);
+  }
+
+  /** Represents a session choice in the File Manager dialog. */
+  private record PanelChoice(String baseName, boolean online, Host host) {
+    boolean isLocal() { return host == null; }
+    String displayLabel() { return online ? baseName : baseName + " (offline)"; }
   }
 }

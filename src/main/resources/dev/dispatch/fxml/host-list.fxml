@@ -27,10 +27,11 @@
   <!-- Host list — double-click to connect, right-click for Edit/Delete -->
   <ListView fx:id="hostListView" VBox.vgrow="ALWAYS" styleClass="host-list"/>
 
-  <!-- Bottom action -->
-  <VBox styleClass="sidebar-actions" spacing="0">
+  <!-- Bottom actions -->
+  <VBox styleClass="sidebar-actions" spacing="6">
     <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
-    <Button text="+ Add Host" maxWidth="Infinity" onAction="#onAdd"/>
+    <Button text="File Manager" maxWidth="Infinity" styleClass="sidebar-fm-btn" onAction="#onOpenFileManager"/>
+    <Button text="+ Add Host"   maxWidth="Infinity" onAction="#onAdd"/>
   </VBox>
 
 </VBox>

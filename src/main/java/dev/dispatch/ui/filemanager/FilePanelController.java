@@ -107,12 +107,17 @@ public class FilePanelController {
 
   private void switchSession(NamedSession ns) {
     FileSession old = this.session;
-    FileSession next = ns.factory().get();
-    this.session = next;
-    titleLabel.setText(next.displayName());
-    sessionBtn.setText(next.displayName());
-    navigate(next.home());
-    old.close();
+    ns.factory().create(next -> {
+      this.session = next;
+      titleLabel.setText(next.displayName());
+      sessionBtn.setText(next.displayName());
+      navigate(next.home());
+      closeQuietly(old);
+    });
+  }
+
+  private void closeQuietly(FileSession sess) {
+    try { sess.close(); } catch (Exception e) { log.warn("Session close error", e); }
   }
 
   /** Navigates to {@code path} on a virtual thread, updates the table on the FX thread. */
