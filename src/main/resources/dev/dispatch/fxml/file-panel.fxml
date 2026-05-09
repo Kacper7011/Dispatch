@@ -17,12 +17,10 @@
     VBox.vgrow="ALWAYS"
     HBox.hgrow="ALWAYS">
 
-  <!-- Header: session name + session switcher -->
-  <HBox styleClass="file-panel-header" alignment="CENTER_LEFT" spacing="4">
+  <!-- Header: session switcher flush-left -->
+  <HBox styleClass="file-panel-header" alignment="CENTER_LEFT" spacing="0">
     <padding><Insets top="5" right="8" bottom="5" left="8"/></padding>
-    <Label fx:id="titleLabel" styleClass="file-panel-title"/>
-    <Region HBox.hgrow="ALWAYS"/>
-    <MenuButton fx:id="sessionBtn" styleClass="file-panel-session-btn" text="Switch session"/>
+    <MenuButton fx:id="sessionBtn" styleClass="file-panel-session-btn" text="Switch session" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
   </HBox>
 
   <!-- Editable path bar -->

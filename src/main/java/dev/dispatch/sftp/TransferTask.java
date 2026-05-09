@@ -88,6 +88,11 @@ public final class TransferTask {
     cancelled.set(true);
   }
 
+  /** Returns {@code true} if {@link #cancel()} has been called. */
+  public boolean isCancelled() {
+    return cancelled.get();
+  }
+
   private void transferFile(
       String from, String to, ObservableEmitter<TransferProgress> emitter) throws IOException {
     AtomicLong total = new AtomicLong(-1);

@@ -4,7 +4,9 @@ import dev.dispatch.sftp.FileEntry;
 import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
+import dev.dispatch.sftp.TransferTask.TransferProgress;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -41,7 +43,6 @@ public class FilePanelController {
 
   private static final Logger log = LoggerFactory.getLogger(FilePanelController.class);
 
-  @FXML private Label titleLabel;
   @FXML private MenuButton sessionBtn;
   @FXML private TextField pathField;
   @FXML private TableView<FileEntryRow> fileTable;
@@ -79,7 +80,6 @@ public class FilePanelController {
   public void init(FileSession session, Runnable onActivated) {
     this.session = session;
     this.onActivated = onActivated;
-    titleLabel.setText(session.displayName());
     sessionBtn.setText(session.displayName());
     navigate(session.home());
   }
@@ -109,7 +109,6 @@ public class FilePanelController {
     FileSession old = this.session;
     ns.factory().create(next -> {
       this.session = next;
-      titleLabel.setText(next.displayName());
       sessionBtn.setText(next.displayName());
       navigate(next.home());
       closeQuietly(old);
@@ -220,11 +219,15 @@ public class FilePanelController {
 
   /**
    * Sets up drag-and-drop on this panel. Must be called after {@link #init} and
-   * {@link #installContextMenu}.
+   * {@link #installContextMenu}. The three callbacks are wired to the progress bar
+   * in {@link FileManagerController}.
    *
    * <p>Logic: same session instance → move; different sessions → copy.
    */
-  public void installDragAndDrop() {
+  public void installDragAndDrop(
+      Consumer<TransferTask> onTransferStart,
+      Consumer<TransferProgress> onTransferProgress,
+      Runnable onTransferDone) {
     fileTable.setOnDragDetected(e -> {
       List<FileEntry> sel = getSelectedEntries();
       if (sel.isEmpty()) return;
@@ -265,18 +268,16 @@ public class FilePanelController {
       Thread.ofVirtual().start(() -> {
         for (FileEntry entry : dragged) {
           String destPath = destDir + "/" + entry.getName();
+          TransferTask task = new TransferTask(srcSession, entry.getPath(), destSession, destPath);
+          onTransferStart.accept(task);
           Throwable[] error = {null};
-          new TransferTask(srcSession, entry.getPath(), destSession, destPath)
-              .start()
-              .blockingSubscribe(
-                  p -> {},
-                  err -> {
-                    log.error("DnD transfer failed: {}", entry.getPath(), err);
-                    error[0] = err;
-                  },
-                  () -> {});
+          task.start().blockingSubscribe(
+              onTransferProgress::accept,
+              err -> { log.error("DnD transfer failed: {}", entry.getPath(), err); error[0] = err; },
+              () -> {});
           if (error[0] != null) {
             final Throwable err = error[0];
+            onTransferDone.run();
             Platform.runLater(() ->
                 new Alert(Alert.AlertType.ERROR, err.getMessage(), ButtonType.OK).showAndWait());
             return;
@@ -286,6 +287,7 @@ public class FilePanelController {
             catch (SftpException ex) { log.error("DnD delete failed", ex); }
           }
         }
+        onTransferDone.run();
         Platform.runLater(() -> {
           refresh();
           if (srcPanel != this) srcPanel.refresh();

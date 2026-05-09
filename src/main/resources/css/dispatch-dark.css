@@ -1345,6 +1345,60 @@
   -fx-pref-width: 1;
 }
 
+.transfer-progress-row {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 1 0 0 0;
+}
+
+.transfer-progress-filename {
+  -fx-text-fill: -cd-fg;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-min-width: 120px;
+  -fx-max-width: 260px;
+}
+
+.transfer-progress-bytes {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-min-width: 110px;
+}
+
+.transfer-progress-row .progress-bar {
+  -fx-pref-height: 6px;
+}
+
+.transfer-progress-row .progress-bar .bar {
+  -fx-background-color: -cd-accent;
+  -fx-background-radius: 3;
+  -fx-background-insets: 0;
+}
+
+.transfer-progress-row .progress-bar .track {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-background-radius: 3;
+  -fx-background-insets: 0;
+}
+
+.transfer-cancel-btn {
+  -fx-background-color: rgba(212, 126, 126, 0.12);
+  -fx-text-fill: -cd-red;
+  -fx-border-color: rgba(212, 126, 126, 0.28);
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-font-size: 11px;
+  -fx-padding: 2 10 2 10;
+  -fx-cursor: hand;
+}
+
+.transfer-cancel-btn:hover {
+  -fx-background-color: rgba(212, 126, 126, 0.22);
+  -fx-border-color: rgba(212, 126, 126, 0.45);
+}
+
 .file-manager-actions {
   -fx-background-color: -cd-bg-alt;
   -fx-border-color: -cd-border;
