@@ -1310,3 +1310,142 @@
 .reconnect-btn:hover {
   -fx-background-color: rgba(126, 184, 186, 0.10);
 }
+
+/* ============================================================
+   File Manager (Midnight Commander style)
+   ============================================================ */
+
+.file-manager {
+  -fx-background-color: -cd-bg;
+}
+
+.file-manager-divider {
+  -fx-background-color: -cd-border2;
+  -fx-pref-width: 1;
+}
+
+.file-manager-actions {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 1 0 0 0;
+}
+
+.file-action-btn {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1;
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+  -fx-font-size: 11px;
+  -fx-padding: 3 10 3 10;
+  -fx-cursor: hand;
+}
+
+.file-action-btn:hover {
+  -fx-background-color: -cd-border2;
+  -fx-text-fill: -cd-fg;
+}
+
+/* Single panel */
+.file-panel {
+  -fx-background-color: -cd-bg;
+}
+
+.file-panel-header {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+}
+
+.file-panel-title {
+  -fx-text-fill: -cd-accent;
+  -fx-font-size: 11px;
+  -fx-font-weight: bold;
+}
+
+.file-panel-path {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+  -fx-background-radius: 0;
+  -fx-border-radius: 0;
+  -fx-font-size: 11px;
+  -fx-padding: 4 6 4 6;
+}
+
+.file-panel-path:focused {
+  -fx-border-color: -cd-accent;
+}
+
+.file-panel-status {
+  -fx-background-color: -cd-bg-alt;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-padding: 3 8 3 8;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 1 0 0 0;
+  -fx-min-width: 0;
+}
+
+.file-panel-empty {
+  -fx-text-fill: -cd-fg-dim2;
+  -fx-font-size: 12px;
+}
+
+/* File table */
+.file-table {
+  -fx-background-color: -cd-bg;
+  -fx-border-color: transparent;
+  -fx-table-cell-border-color: transparent;
+}
+
+.file-table .column-header-background {
+  -fx-background-color: -cd-bg-alt;
+}
+
+.file-table .column-header {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 1 1 0;
+  -fx-size: 26px;
+}
+
+.file-table .column-header .label {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 11px;
+  -fx-alignment: CENTER_LEFT;
+  -fx-padding: 0 6 0 6;
+}
+
+.file-table .table-row-cell {
+  -fx-background-color: transparent;
+  -fx-table-cell-border-color: transparent;
+  -fx-cell-size: 24px;
+}
+
+.file-table .table-row-cell:odd {
+  -fx-background-color: rgba(255,255,255,0.015);
+}
+
+.file-table .table-row-cell:selected {
+  -fx-background-color: rgba(126,184,186,0.15);
+}
+
+.file-table .table-row-cell:selected .text {
+  -fx-fill: -cd-fg;
+}
+
+.file-table .table-cell {
+  -fx-text-fill: -cd-fg;
+  -fx-font-size: 12px;
+  -fx-padding: 0 6 0 6;
+  -fx-border-color: transparent;
+}
+
+/* Active panel: accent left border on the table */
+.file-table.file-panel-active {
+  -fx-border-color: -cd-accent transparent transparent transparent;
+  -fx-border-width: 2 0 0 0;
+}

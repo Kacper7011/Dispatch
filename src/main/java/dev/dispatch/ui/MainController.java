@@ -16,9 +16,12 @@ import dev.dispatch.ssh.TunnelService;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
 import dev.dispatch.storage.SessionRepository;
+import dev.dispatch.sftp.LocalFileSession;
+import dev.dispatch.sftp.SftpFileSession;
 import dev.dispatch.ui.docker.ContainerLogsController;
 import dev.dispatch.ui.docker.DockerExecController;
 import dev.dispatch.ui.docker.DockerPanelController;
+import dev.dispatch.ui.filemanager.FileManagerController;
 import dev.dispatch.ui.host.HostListController;
 import dev.dispatch.ui.ssh.SshTabController;
 import java.io.IOException;
@@ -112,6 +115,7 @@ public class MainController {
     this.sessionRepository = new SessionRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
+    hostListController.setOnOpenFileManager(this::openFileManagerTab);
 
     configureWindowControls();
     configureSplitPane();
@@ -538,6 +542,20 @@ public class MainController {
     sessionTabPane.getSelectionModel().select(tab);
     updateEmptyState();
     log.info("Exec tab opened for {}", container.getName());
+  }
+
+  private void openFileManagerTab(Host host) {
+    SshSession session = sshService.getSession(host.getId()).orElse(null);
+    if (session == null) return;
+    FileManagerController ctrl =
+        new FileManagerController(new SftpFileSession(session), new LocalFileSession());
+    Tab tab = new Tab("files › " + host.getName());
+    tab.setContent(ctrl.createNode());
+    tab.setOnClosed(e -> ctrl.dispose());
+    sessionTabPane.getTabs().add(tab);
+    sessionTabPane.getSelectionModel().select(tab);
+    updateEmptyState();
+    log.info("File manager tab opened for {}", host.getName());
   }
 
   private void openLogsTab(ContainerInfo container, DockerService dockerService) {

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+
+<BorderPane
+    xmlns:fx="http://javafx.com/fxml/1"
+    styleClass="file-manager">
+
+  <!-- Dual panel -->
+  <center>
+    <HBox>
+      <fx:include fx:id="leftPanel"  source="file-panel.fxml" HBox.hgrow="ALWAYS"/>
+      <Separator orientation="VERTICAL" styleClass="file-manager-divider"/>
+      <fx:include fx:id="rightPanel" source="file-panel.fxml" HBox.hgrow="ALWAYS"/>
+    </HBox>
+  </center>
+
+  <!-- Action bar (MC-style function key buttons) -->
+  <bottom>
+    <HBox styleClass="file-manager-actions" spacing="2" alignment="CENTER_LEFT">
+      <padding><Insets top="4" right="6" bottom="4" left="6"/></padding>
+      <Button text="F5 Kopiuj"     styleClass="file-action-btn" onAction="#onCopy"   mnemonicParsing="false"/>
+      <Button text="F6 Przenieś"   styleClass="file-action-btn" onAction="#onMove"   mnemonicParsing="false"/>
+      <Button text="F7 Katalog"    styleClass="file-action-btn" onAction="#onMkdir"  mnemonicParsing="false"/>
+      <Button text="F8 Usuń"       styleClass="file-action-btn" onAction="#onDelete" mnemonicParsing="false"/>
+      <Button text="F9 Zmień nazwę" styleClass="file-action-btn" onAction="#onRename" mnemonicParsing="false"/>
+      <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+  </bottom>
+
+</BorderPane>
