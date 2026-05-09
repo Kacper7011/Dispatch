@@ -6,6 +6,7 @@ import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -28,15 +29,16 @@ public class FileManagerController {
   @FXML private FilePanelController leftPanelController;
   @FXML private FilePanelController rightPanelController;
 
-  private final FileSession leftSession;
-  private final FileSession rightSession;
-  private final List<NamedSession> availableSessions;
+  private final FileSession leftDefault;
+  private final FileSession rightDefault;
+  private final Supplier<List<NamedSession>> sessionsSupplier;
   private FilePanelController activePanel;
 
-  public FileManagerController(FileSession left, FileSession right, List<NamedSession> available) {
-    this.leftSession = left;
-    this.rightSession = right;
-    this.availableSessions = available;
+  public FileManagerController(
+      FileSession left, FileSession right, Supplier<List<NamedSession>> sessions) {
+    this.leftDefault = left;
+    this.rightDefault = right;
+    this.sessionsSupplier = sessions;
   }
 
   /**
@@ -49,10 +51,10 @@ public class FileManagerController {
           getClass().getResource("/dev/dispatch/fxml/file-manager.fxml"));
       loader.setController(this);
       Node root = loader.load();
-      leftPanelController.init(leftSession, () -> setActive(leftPanelController));
-      rightPanelController.init(rightSession, () -> setActive(rightPanelController));
-      leftPanelController.setAvailableSessions(availableSessions);
-      rightPanelController.setAvailableSessions(availableSessions);
+      leftPanelController.init(leftDefault, () -> setActive(leftPanelController));
+      rightPanelController.init(rightDefault, () -> setActive(rightPanelController));
+      leftPanelController.setAvailableSessions(sessionsSupplier);
+      rightPanelController.setAvailableSessions(sessionsSupplier);
       leftPanelController.installContextMenu(
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       rightPanelController.installContextMenu(
@@ -67,10 +69,10 @@ public class FileManagerController {
     }
   }
 
-  /** Releases both sessions; called when the tab is closed. */
+  /** Releases the sessions currently active in both panels; called when the tab is closed. */
   public void dispose() {
-    closeQuietly(leftSession);
-    closeQuietly(rightSession);
+    if (leftPanelController != null) closeQuietly(leftPanelController.getCurrentSession());
+    if (rightPanelController != null) closeQuietly(rightPanelController.getCurrentSession());
   }
 
   // ── Key handler ──────────────────────────────────────────────────────────────
@@ -202,7 +204,7 @@ public class FileManagerController {
   }
 
   private FileSession sessionFor(FilePanelController panel) {
-    return panel == leftPanelController ? leftSession : rightSession;
+    return panel.getCurrentSession();
   }
 
   private void deleteQuietly(FileSession sess, FileEntry entry) {

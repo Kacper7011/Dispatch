@@ -5,6 +5,7 @@ import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -79,21 +80,29 @@ public class FilePanelController {
     this.session = session;
     this.onActivated = onActivated;
     titleLabel.setText(session.displayName());
+    sessionBtn.setText(session.displayName());
     navigate(session.home());
   }
 
+  /** Returns the session currently active in this panel. */
+  public FileSession getCurrentSession() {
+    return session;
+  }
+
   /**
-   * Populates the session-switcher {@link MenuButton} in the panel header.
-   * When the user picks an entry the current session is closed and replaced with a fresh one.
+   * Wires the session-switcher {@link MenuButton}. The supplier is called every time the
+   * dropdown opens, so newly-connected hosts always appear without restarting the tab.
    */
-  public void setAvailableSessions(List<NamedSession> sessions) {
-    sessionBtn.getItems().clear();
-    for (NamedSession ns : sessions) {
-      MenuItem item = new MenuItem(ns.label());
-      item.setOnAction(e -> switchSession(ns));
-      sessionBtn.getItems().add(item);
-    }
-    sessionBtn.setVisible(!sessions.isEmpty());
+  public void setAvailableSessions(Supplier<List<NamedSession>> sessionsSupplier) {
+    sessionBtn.setOnShowing(e -> {
+      sessionBtn.getItems().clear();
+      for (NamedSession ns : sessionsSupplier.get()) {
+        MenuItem item = new MenuItem(ns.label());
+        item.setOnAction(ev -> switchSession(ns));
+        sessionBtn.getItems().add(item);
+      }
+    });
+    sessionBtn.setVisible(true);
   }
 
   private void switchSession(NamedSession ns) {
@@ -101,6 +110,7 @@ public class FilePanelController {
     FileSession next = ns.factory().get();
     this.session = next;
     titleLabel.setText(next.displayName());
+    sessionBtn.setText(next.displayName());
     navigate(next.home());
     old.close();
   }

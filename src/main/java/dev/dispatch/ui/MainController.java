@@ -550,12 +550,16 @@ public class MainController {
   private void openFileManagerTab(Host host) {
     SshSession session = sshService.getSession(host.getId()).orElse(null);
     if (session == null) return;
-    List<NamedSession> available = new ArrayList<>();
-    available.add(new NamedSession("Local", LocalFileSession::new));
-    sshService.getAllSessions().forEach(s ->
-        available.add(new NamedSession(s.getHost().getName(), () -> new SftpFileSession(s))));
-    FileManagerController ctrl =
-        new FileManagerController(new SftpFileSession(session), new LocalFileSession(), available);
+    FileManagerController ctrl = new FileManagerController(
+        new SftpFileSession(session),
+        new LocalFileSession(),
+        () -> {
+          List<NamedSession> available = new ArrayList<>();
+          available.add(new NamedSession("Local", LocalFileSession::new));
+          sshService.getAllSessions().forEach(s ->
+              available.add(new NamedSession(s.getHost().getName(), () -> new SftpFileSession(s))));
+          return available;
+        });
     Tab tab = new Tab("files › " + host.getName());
     tab.setContent(ctrl.createNode());
     tab.setOnClosed(e -> ctrl.dispose());
