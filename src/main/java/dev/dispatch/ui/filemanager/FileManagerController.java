@@ -8,6 +8,7 @@ import dev.dispatch.sftp.TransferTask.TransferProgress;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import javafx.application.Platform;
@@ -16,11 +17,9 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.HBox;
+import javafx.stage.Window;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,18 +33,21 @@ public class FileManagerController {
 
   @FXML private FilePanelController leftPanelController;
   @FXML private FilePanelController rightPanelController;
-  @FXML private HBox transferProgressBox;
-  @FXML private ProgressBar transferProgressBar;
-  @FXML private Label transferFilenameLabel;
-  @FXML private Label transferBytesLabel;
 
   private final FileSession leftDefault;
   private final FileSession rightDefault;
   private final Supplier<List<NamedSession>> sessionsSupplier;
   private FilePanelController activePanel;
+  private Node rootNode;
 
+  // Transfer state shared across transferSelected() and DnD callbacks
   private final AtomicReference<TransferTask> currentTask = new AtomicReference<>();
   private final AtomicBoolean transferCancelled = new AtomicBoolean(false);
+  private final AtomicInteger doneCount = new AtomicInteger(0);
+  private final AtomicInteger totalCount = new AtomicInteger(0);
+
+  // Created lazily on first transfer — needs owner Window from the scene
+  private TransferProgressDialog progressDialog;
 
   public FileManagerController(
       FileSession left, FileSession right, Supplier<List<NamedSession>> sessions) {
@@ -63,7 +65,7 @@ public class FileManagerController {
       FXMLLoader loader = new FXMLLoader(
           getClass().getResource("/dev/dispatch/fxml/file-manager.fxml"));
       loader.setController(this);
-      Node root = loader.load();
+      rootNode = loader.load();
       leftPanelController.init(leftDefault, () -> setActive(leftPanelController));
       rightPanelController.init(rightDefault, () -> setActive(rightPanelController));
       leftPanelController.setAvailableSessions(sessionsSupplier);
@@ -72,18 +74,23 @@ public class FileManagerController {
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       rightPanelController.installContextMenu(
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
-      leftPanelController.installDragAndDrop(this::onDragTransferStart, this::onDragTransferProgress, this::onDragTransferDone);
-      rightPanelController.installDragAndDrop(this::onDragTransferStart, this::onDragTransferProgress, this::onDragTransferDone);
+      leftPanelController.installDragAndDrop(
+          this::onDndBatchStart, this::onDndItemStart,
+          this::onDndProgress, this::onDndItemDone, this::onDndBatchDone);
+      rightPanelController.installDragAndDrop(
+          this::onDndBatchStart, this::onDndItemStart,
+          this::onDndProgress, this::onDndItemDone, this::onDndBatchDone);
       setActive(leftPanelController);
-      root.setOnKeyPressed(this::handleKey);
-      return root;
+      rootNode.setOnKeyPressed(this::handleKey);
+      return rootNode;
     } catch (IOException e) {
       throw new RuntimeException("Failed to load file-manager.fxml", e);
     }
   }
 
-  /** Releases the sessions currently active in both panels; called when the tab is closed. */
+  /** Releases sessions and closes the progress dialog; called when the tab is closed. */
   public void dispose() {
+    if (progressDialog != null) progressDialog.close();
     if (leftPanelController != null) closeQuietly(leftPanelController.getCurrentSession());
     if (rightPanelController != null) closeQuietly(rightPanelController.getCurrentSession());
   }
@@ -106,13 +113,6 @@ public class FileManagerController {
 
   @FXML private void onCopy() { transferSelected(false); }
   @FXML private void onMove() { transferSelected(true); }
-
-  @FXML
-  private void onCancelTransfer() {
-    TransferTask task = currentTask.get();
-    if (task != null) task.cancel();
-    transferCancelled.set(true);
-  }
 
   @FXML
   private void onMkdir() {
@@ -179,29 +179,41 @@ public class FileManagerController {
     String destDir = target.getCurrentPath();
     FilePanelController srcPanel = activePanel;
 
+    int total = sel.size();
+    doneCount.set(0);
+    totalCount.set(total);
     transferCancelled.set(false);
+
+    // Show dialog synchronously on FX thread before the VT starts — guarantees it
+    // is visible before the first progress update arrives via Platform.runLater.
+    getDialog().show(total, this::cancelTransfer);
+
     Thread.ofVirtual().start(() -> {
       for (FileEntry entry : sel) {
         if (transferCancelled.get()) break;
         String destPath = destDir + "/" + entry.getName();
         TransferTask task = new TransferTask(src, entry.getPath(), dest, destPath);
         currentTask.set(task);
-        Platform.runLater(this::showProgressBox);
         Throwable[] error = {null};
         task.start().blockingSubscribe(
-            this::updateTransferProgress,
+            p -> {
+              int done = doneCount.get();
+              int tot = totalCount.get();
+              Platform.runLater(() -> getDialog().update(p, done, tot));
+            },
             e -> { log.error("Transfer failed: {}", entry.getPath(), e); error[0] = e; },
             () -> {});
         if (error[0] != null) {
           final Throwable err = error[0];
-          endTransfer();
-          Platform.runLater(() -> showError("Transfer failed", err.getMessage()));
+          Platform.runLater(() -> { getDialog().hide(); showError("Transfer failed", err.getMessage()); });
           return;
         }
         if (move && !transferCancelled.get()) deleteQuietly(src, entry);
+        int done = doneCount.incrementAndGet();
+        int tot = totalCount.get();
+        Platform.runLater(() -> getDialog().updateCount(done, tot));
       }
-      endTransfer();
-      Platform.runLater(() -> { srcPanel.refresh(); target.refresh(); });
+      Platform.runLater(() -> { getDialog().hide(); srcPanel.refresh(); target.refresh(); });
     });
   }
 
@@ -213,59 +225,56 @@ public class FileManagerController {
     });
   }
 
-  // ── DnD progress callbacks (wired into both panels in createNode) ─────────────
+  // ── DnD progress callbacks ────────────────────────────────────────────────────
 
-  private void onDragTransferStart(TransferTask task) {
+  /** Called from VT at the start of a DnD batch. */
+  private void onDndBatchStart(int total) {
+    doneCount.set(0);
+    totalCount.set(total);
+    transferCancelled.set(false);
+    Platform.runLater(() -> getDialog().show(total, this::cancelTransfer));
+  }
+
+  /** Called from VT when a new DnD item starts. */
+  private void onDndItemStart(TransferTask task) {
     currentTask.set(task);
-    Platform.runLater(this::showProgressBox);
   }
 
-  private void onDragTransferProgress(TransferProgress p) {
-    updateTransferProgress(p);
+  /** Called from VT for each progress tick of the current DnD item. */
+  private void onDndProgress(TransferProgress p) {
+    int done = doneCount.get();
+    int tot = totalCount.get();
+    Platform.runLater(() -> getDialog().update(p, done, tot));
   }
 
-  private void onDragTransferDone() {
-    endTransfer();
+  /** Called from VT after each DnD item completes. */
+  private void onDndItemDone() {
+    int done = doneCount.incrementAndGet();
+    int tot = totalCount.get();
+    Platform.runLater(() -> getDialog().updateCount(done, tot));
   }
 
-  // ── Progress bar helpers ─────────────────────────────────────────────────────
-
-  private void showProgressBox() {
-    transferProgressBox.setVisible(true);
-    transferProgressBox.setManaged(true);
-    transferProgressBar.setProgress(0);
-    transferFilenameLabel.setText("");
-    transferBytesLabel.setText("");
-  }
-
-  private void updateTransferProgress(TransferProgress p) {
-    Platform.runLater(() -> {
-      double progress = p.totalBytes() > 0 ? p.fraction() : ProgressBar.INDETERMINATE_PROGRESS;
-      transferProgressBar.setProgress(progress);
-      transferFilenameLabel.setText(p.filename());
-      String bytes = formatBytes(p.transferredBytes());
-      String total = p.totalBytes() > 0 ? " / " + formatBytes(p.totalBytes()) : "";
-      transferBytesLabel.setText(bytes + total);
-    });
-  }
-
-  private void endTransfer() {
-    currentTask.set(null);
-    Platform.runLater(() -> {
-      transferProgressBox.setVisible(false);
-      transferProgressBox.setManaged(false);
-    });
-  }
-
-  private static String formatBytes(long bytes) {
-    if (bytes < 0) return "?";
-    if (bytes < 1_024) return bytes + " B";
-    if (bytes < 1_024 * 1_024) return String.format("%.1f KB", bytes / 1_024.0);
-    if (bytes < 1_024L * 1_024 * 1_024) return String.format("%.1f MB", bytes / (1_024.0 * 1_024));
-    return String.format("%.2f GB", bytes / (1_024.0 * 1_024 * 1_024));
+  /** Called from VT when the entire DnD batch completes. */
+  private void onDndBatchDone() {
+    Platform.runLater(() -> getDialog().hide());
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  private void cancelTransfer() {
+    TransferTask task = currentTask.get();
+    if (task != null) task.cancel();
+    transferCancelled.set(true);
+  }
+
+  private TransferProgressDialog getDialog() {
+    if (progressDialog == null) {
+      Window owner = rootNode != null && rootNode.getScene() != null
+          ? rootNode.getScene().getWindow() : null;
+      progressDialog = new TransferProgressDialog(owner);
+    }
+    return progressDialog;
+  }
 
   private void setActive(FilePanelController panel) {
     activePanel = panel;

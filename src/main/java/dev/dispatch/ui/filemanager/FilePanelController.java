@@ -7,6 +7,7 @@ import dev.dispatch.sftp.TransferTask;
 import dev.dispatch.sftp.TransferTask.TransferProgress;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -225,9 +226,11 @@ public class FilePanelController {
    * <p>Logic: same session instance → move; different sessions → copy.
    */
   public void installDragAndDrop(
-      Consumer<TransferTask> onTransferStart,
-      Consumer<TransferProgress> onTransferProgress,
-      Runnable onTransferDone) {
+      IntConsumer onBatchStart,
+      Consumer<TransferTask> onItemStart,
+      Consumer<TransferProgress> onProgress,
+      Runnable onItemDone,
+      Runnable onBatchDone) {
     fileTable.setOnDragDetected(e -> {
       List<FileEntry> sel = getSelectedEntries();
       if (sel.isEmpty()) return;
@@ -266,18 +269,19 @@ public class FilePanelController {
       fileTable.getStyleClass().remove("file-panel-drag-target");
       FileSession destSession = session;
       Thread.ofVirtual().start(() -> {
+        onBatchStart.accept(dragged.size());
         for (FileEntry entry : dragged) {
           String destPath = destDir + "/" + entry.getName();
           TransferTask task = new TransferTask(srcSession, entry.getPath(), destSession, destPath);
-          onTransferStart.accept(task);
+          onItemStart.accept(task);
           Throwable[] error = {null};
           task.start().blockingSubscribe(
-              onTransferProgress::accept,
+              onProgress::accept,
               err -> { log.error("DnD transfer failed: {}", entry.getPath(), err); error[0] = err; },
               () -> {});
           if (error[0] != null) {
             final Throwable err = error[0];
-            onTransferDone.run();
+            onBatchDone.run();
             Platform.runLater(() ->
                 new Alert(Alert.AlertType.ERROR, err.getMessage(), ButtonType.OK).showAndWait());
             return;
@@ -286,8 +290,9 @@ public class FilePanelController {
             try { srcSession.delete(entry.getPath(), true); }
             catch (SftpException ex) { log.error("DnD delete failed", ex); }
           }
+          onItemDone.run();
         }
-        onTransferDone.run();
+        onBatchDone.run();
         Platform.runLater(() -> {
           refresh();
           if (srcPanel != this) srcPanel.refresh();

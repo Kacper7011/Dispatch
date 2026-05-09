@@ -2,13 +2,10 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.VBox?>
 
 <BorderPane
     xmlns:fx="http://javafx.com/fxml/1"
@@ -23,30 +20,17 @@
     </HBox>
   </center>
 
-  <!-- Progress row + action bar stacked at the bottom -->
+  <!-- Action bar (MC-style function key buttons) -->
   <bottom>
-    <VBox>
-      <!-- Transfer progress (hidden when idle) -->
-      <HBox fx:id="transferProgressBox" styleClass="transfer-progress-row"
-            alignment="CENTER_LEFT" spacing="10" visible="false" managed="false">
-        <padding><Insets top="5" right="10" bottom="5" left="10"/></padding>
-        <Label fx:id="transferFilenameLabel" styleClass="transfer-progress-filename"/>
-        <ProgressBar fx:id="transferProgressBar" HBox.hgrow="ALWAYS" maxWidth="Infinity" progress="0"/>
-        <Label fx:id="transferBytesLabel" styleClass="transfer-progress-bytes"/>
-        <Button text="Cancel" styleClass="transfer-cancel-btn" onAction="#onCancelTransfer" mnemonicParsing="false"/>
-      </HBox>
-
-      <!-- Action bar (MC-style function key buttons) -->
-      <HBox styleClass="file-manager-actions" spacing="2" alignment="CENTER_LEFT">
-        <padding><Insets top="4" right="6" bottom="4" left="6"/></padding>
-        <Button text="F5 Copy"    styleClass="file-action-btn" onAction="#onCopy"   mnemonicParsing="false"/>
-        <Button text="F6 Move"    styleClass="file-action-btn" onAction="#onMove"   mnemonicParsing="false"/>
-        <Button text="F7 Mkdir"   styleClass="file-action-btn" onAction="#onMkdir"  mnemonicParsing="false"/>
-        <Button text="F8 Delete"  styleClass="file-action-btn" onAction="#onDelete" mnemonicParsing="false"/>
-        <Button text="F9 Rename"  styleClass="file-action-btn" onAction="#onRename" mnemonicParsing="false"/>
-        <Region HBox.hgrow="ALWAYS"/>
-      </HBox>
-    </VBox>
+    <HBox styleClass="file-manager-actions" spacing="2" alignment="CENTER_LEFT">
+      <padding><Insets top="4" right="6" bottom="4" left="6"/></padding>
+      <Button text="F5 Copy"    styleClass="file-action-btn" onAction="#onCopy"   mnemonicParsing="false"/>
+      <Button text="F6 Move"    styleClass="file-action-btn" onAction="#onMove"   mnemonicParsing="false"/>
+      <Button text="F7 Mkdir"   styleClass="file-action-btn" onAction="#onMkdir"  mnemonicParsing="false"/>
+      <Button text="F8 Delete"  styleClass="file-action-btn" onAction="#onDelete" mnemonicParsing="false"/>
+      <Button text="F9 Rename"  styleClass="file-action-btn" onAction="#onRename" mnemonicParsing="false"/>
+      <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
   </bottom>
 
 </BorderPane>
