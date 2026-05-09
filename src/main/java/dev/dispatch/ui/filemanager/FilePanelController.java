@@ -127,11 +127,11 @@ public class FilePanelController {
    */
   public void installContextMenu(
       Runnable copy, Runnable move, Runnable mkdir, Runnable delete, Runnable rename) {
-    MenuItem copyItem   = new MenuItem("Kopiuj do drugiego panelu  F5");
-    MenuItem moveItem   = new MenuItem("Przenieś do drugiego panelu  F6");
-    MenuItem mkdirItem  = new MenuItem("Nowy katalog  F7");
-    MenuItem deleteItem = new MenuItem("Usuń  F8");
-    MenuItem renameItem = new MenuItem("Zmień nazwę  F9");
+    MenuItem copyItem   = new MenuItem("Copy to other panel");
+    MenuItem moveItem   = new MenuItem("Move to other panel");
+    MenuItem mkdirItem  = new MenuItem("New directory");
+    MenuItem deleteItem = new MenuItem("Delete");
+    MenuItem renameItem = new MenuItem("Rename");
 
     copyItem.setOnAction(e -> copy.run());
     moveItem.setOnAction(e -> move.run());
