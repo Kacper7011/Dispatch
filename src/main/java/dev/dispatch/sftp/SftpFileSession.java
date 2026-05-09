@@ -173,6 +173,11 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
   }
 
   @Override
+  public String sessionId() {
+    return displayName;
+  }
+
+  @Override
   public void close() {
     if (sftp.isConnected()) {
       sftp.disconnect();

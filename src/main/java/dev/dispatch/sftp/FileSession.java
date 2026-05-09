@@ -75,6 +75,13 @@ public interface FileSession extends AutoCloseable {
    */
   String displayName();
 
+  /**
+   * Opaque identifier used to determine whether two sessions refer to the same host
+   * (same id → move semantics; different id → copy semantics).
+   * {@link LocalFileSession} returns {@code "local"}; SFTP sessions return the hostname.
+   */
+  String sessionId();
+
   /** Releases all resources held by this session. Never throws. */
   @Override
   void close();

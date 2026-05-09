@@ -31,11 +31,13 @@ public class FileManagerController {
 
   private final FileSession leftSession;
   private final FileSession rightSession;
+  private final List<NamedSession> availableSessions;
   private FilePanelController activePanel;
 
-  public FileManagerController(FileSession left, FileSession right) {
+  public FileManagerController(FileSession left, FileSession right, List<NamedSession> available) {
     this.leftSession = left;
     this.rightSession = right;
+    this.availableSessions = available;
   }
 
   /**
@@ -50,6 +52,8 @@ public class FileManagerController {
       Node root = loader.load();
       leftPanelController.init(leftSession, () -> setActive(leftPanelController));
       rightPanelController.init(rightSession, () -> setActive(rightPanelController));
+      leftPanelController.setAvailableSessions(availableSessions);
+      rightPanelController.setAvailableSessions(availableSessions);
       leftPanelController.installContextMenu(
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       rightPanelController.installContextMenu(

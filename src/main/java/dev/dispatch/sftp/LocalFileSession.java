@@ -169,6 +169,11 @@ public final class LocalFileSession implements FileSession {
   }
 
   @Override
+  public String sessionId() {
+    return "local";
+  }
+
+  @Override
   public void close() {}
 
   private long sizeQuietly(Path path) {

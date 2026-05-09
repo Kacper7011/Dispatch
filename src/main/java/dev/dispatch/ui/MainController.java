@@ -22,10 +22,13 @@ import dev.dispatch.ui.docker.ContainerLogsController;
 import dev.dispatch.ui.docker.DockerExecController;
 import dev.dispatch.ui.docker.DockerPanelController;
 import dev.dispatch.ui.filemanager.FileManagerController;
+import dev.dispatch.ui.filemanager.NamedSession;
 import dev.dispatch.ui.host.HostListController;
 import dev.dispatch.ui.ssh.SshTabController;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javafx.application.Platform;
@@ -547,8 +550,12 @@ public class MainController {
   private void openFileManagerTab(Host host) {
     SshSession session = sshService.getSession(host.getId()).orElse(null);
     if (session == null) return;
+    List<NamedSession> available = new ArrayList<>();
+    available.add(new NamedSession("Local", LocalFileSession::new));
+    sshService.getAllSessions().forEach(s ->
+        available.add(new NamedSession(s.getHost().getName(), () -> new SftpFileSession(s))));
     FileManagerController ctrl =
-        new FileManagerController(new SftpFileSession(session), new LocalFileSession());
+        new FileManagerController(new SftpFileSession(session), new LocalFileSession(), available);
     Tab tab = new Tab("files › " + host.getName());
     tab.setContent(ctrl.createNode());
     tab.setOnClosed(e -> ctrl.dispose());

@@ -1455,3 +1455,28 @@
   -fx-border-width: 2;
   -fx-effect: dropshadow(gaussian, rgba(126,184,186,0.35), 8, 0, 0, 0);
 }
+
+.file-panel-session-btn {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+  -fx-text-fill: -cd-fg2;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-padding: 2 6 2 6;
+  -fx-cursor: hand;
+}
+
+.file-panel-session-btn:hover {
+  -fx-border-color: -cd-accent;
+  -fx-text-fill: -cd-fg;
+}
+
+.file-panel-session-btn .arrow-button {
+  -fx-padding: 0 0 0 4;
+}
+
+.file-panel-session-btn .arrow {
+  -fx-background-color: -cd-fg2;
+}

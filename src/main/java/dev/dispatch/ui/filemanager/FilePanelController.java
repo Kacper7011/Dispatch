@@ -16,6 +16,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
@@ -41,6 +42,7 @@ public class FilePanelController {
   private static final Logger log = LoggerFactory.getLogger(FilePanelController.class);
 
   @FXML private Label titleLabel;
+  @FXML private MenuButton sessionBtn;
   @FXML private TextField pathField;
   @FXML private TableView<FileEntryRow> fileTable;
   @FXML private TableColumn<FileEntryRow, String> nameColumn;
@@ -79,6 +81,29 @@ public class FilePanelController {
     this.onActivated = onActivated;
     titleLabel.setText(session.displayName());
     navigate(session.home());
+  }
+
+  /**
+   * Populates the session-switcher {@link MenuButton} in the panel header.
+   * When the user picks an entry the current session is closed and replaced with a fresh one.
+   */
+  public void setAvailableSessions(List<NamedSession> sessions) {
+    sessionBtn.getItems().clear();
+    for (NamedSession ns : sessions) {
+      MenuItem item = new MenuItem(ns.label());
+      item.setOnAction(e -> switchSession(ns));
+      sessionBtn.getItems().add(item);
+    }
+    sessionBtn.setVisible(!sessions.isEmpty());
+  }
+
+  private void switchSession(NamedSession ns) {
+    FileSession old = this.session;
+    FileSession next = ns.factory().get();
+    this.session = next;
+    titleLabel.setText(next.displayName());
+    navigate(next.home());
+    old.close();
   }
 
   /** Navigates to {@code path} on a virtual thread, updates the table on the FX thread. */
@@ -198,7 +223,7 @@ public class FilePanelController {
     });
 
     fileTable.setOnDragOver(e -> {
-      if (FileDragContext.isActive() && e.getGestureSource() != fileTable) {
+      if (FileDragContext.isActive()) {
         e.acceptTransferModes(
             FileDragContext.isSameSession(session) ? TransferMode.MOVE : TransferMode.COPY);
         e.consume();
@@ -206,7 +231,7 @@ public class FilePanelController {
     });
 
     fileTable.setOnDragEntered(e -> {
-      if (FileDragContext.isActive() && e.getGestureSource() != fileTable)
+      if (FileDragContext.isActive())
         fileTable.getStyleClass().add("file-panel-drag-target");
     });
 

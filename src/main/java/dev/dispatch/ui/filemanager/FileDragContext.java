@@ -32,11 +32,12 @@ final class FileDragContext {
   }
 
   /**
-   * Returns {@code true} when the drop target is the same session instance as the drag source.
-   * Same session → move; different sessions → copy.
+   * Returns {@code true} when the drop target is on the same host as the drag source.
+   * Compares {@link FileSession#sessionId()} so two separate SFTP channels to the same
+   * host are still treated as the same session (move semantics).
    */
   static boolean isSameSession(FileSession target) {
-    return sourceSession == target;
+    return sourceSession.sessionId().equals(target.sessionId());
   }
 
   private FileDragContext() {}
