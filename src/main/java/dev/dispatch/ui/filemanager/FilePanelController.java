@@ -4,7 +4,6 @@ import dev.dispatch.sftp.FileEntry;
 import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.List;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -247,30 +246,36 @@ public class FilePanelController {
       FilePanelController srcPanel = FileDragContext.sourcePanel;
       FileDragContext.clear();
       fileTable.getStyleClass().remove("file-panel-drag-target");
-      for (FileEntry entry : dragged) {
-        String destPath = destDir + "/" + entry.getName();
-        new TransferTask(srcSession, entry.getPath(), session, destPath)
-            .start()
-            .subscribeOn(Schedulers.io())
-            .subscribe(
-                p -> {},
-                err -> {
-                  log.error("DnD transfer failed: {}", entry.getPath(), err);
-                  Platform.runLater(() ->
-                      new Alert(Alert.AlertType.ERROR, err.getMessage(), ButtonType.OK)
-                          .showAndWait());
-                },
-                () -> {
-                  if (move) {
-                    try { srcSession.delete(entry.getPath(), true); }
-                    catch (SftpException ex) { log.error("DnD delete failed", ex); }
-                  }
-                  Platform.runLater(() -> {
-                    refresh();
-                    if (srcPanel != this) srcPanel.refresh();
-                  });
-                });
-      }
+      FileSession destSession = session;
+      Thread.ofVirtual().start(() -> {
+        for (FileEntry entry : dragged) {
+          String destPath = destDir + "/" + entry.getName();
+          Throwable[] error = {null};
+          new TransferTask(srcSession, entry.getPath(), destSession, destPath)
+              .start()
+              .blockingSubscribe(
+                  p -> {},
+                  err -> {
+                    log.error("DnD transfer failed: {}", entry.getPath(), err);
+                    error[0] = err;
+                  },
+                  () -> {});
+          if (error[0] != null) {
+            final Throwable err = error[0];
+            Platform.runLater(() ->
+                new Alert(Alert.AlertType.ERROR, err.getMessage(), ButtonType.OK).showAndWait());
+            return;
+          }
+          if (move) {
+            try { srcSession.delete(entry.getPath(), true); }
+            catch (SftpException ex) { log.error("DnD delete failed", ex); }
+          }
+        }
+        Platform.runLater(() -> {
+          refresh();
+          if (srcPanel != this) srcPanel.refresh();
+        });
+      });
       e.setDropCompleted(true);
       e.consume();
     });

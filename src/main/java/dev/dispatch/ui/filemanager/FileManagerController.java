@@ -4,7 +4,6 @@ import dev.dispatch.sftp.FileEntry;
 import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.util.List;
 import javafx.application.Platform;
@@ -156,23 +155,30 @@ public class FileManagerController {
     FileSession src = sessionFor(activePanel);
     FileSession dest = sessionFor(target);
     String destDir = target.getCurrentPath();
+    FilePanelController srcPanel = activePanel;
 
-    for (FileEntry entry : sel) {
-      String destPath = destDir + "/" + entry.getName();
-      new TransferTask(src, entry.getPath(), dest, destPath)
-          .start()
-          .subscribeOn(Schedulers.io())
-          .subscribe(
-              p -> {},
-              e -> {
-                log.error("Transfer failed: {}", entry.getPath(), e);
-                Platform.runLater(() -> showError("Transfer nieudany", e.getMessage()));
-              },
-              () -> {
-                if (move) deleteQuietly(src, entry);
-                Platform.runLater(() -> { activePanel.refresh(); target.refresh(); });
-              });
-    }
+    Thread.ofVirtual().start(() -> {
+      for (FileEntry entry : sel) {
+        String destPath = destDir + "/" + entry.getName();
+        Throwable[] error = {null};
+        new TransferTask(src, entry.getPath(), dest, destPath)
+            .start()
+            .blockingSubscribe(
+                p -> {},
+                e -> {
+                  log.error("Transfer failed: {}", entry.getPath(), e);
+                  error[0] = e;
+                },
+                () -> {});
+        if (error[0] != null) {
+          final Throwable err = error[0];
+          Platform.runLater(() -> showError("Transfer nieudany", err.getMessage()));
+          return;
+        }
+        if (move) deleteQuietly(src, entry);
+      }
+      Platform.runLater(() -> { srcPanel.refresh(); target.refresh(); });
+    });
   }
 
   private void deleteAll(List<FileEntry> entries) {

@@ -132,7 +132,7 @@ public final class TransferTask {
     List<FileEntry> entries = src.list(srcPath);
     for (FileEntry entry : entries) {
       if (cancelled.get() || emitter.isDisposed()) return;
-      if (entry.isParentLink()) continue;
+      if (entry.isParentLink() || entry.isSymlink()) continue;
       String childDest = destPath + "/" + entry.getName();
       if (entry.isDirectory()) {
         new TransferTask(src, entry.getPath(), dest, childDest).start().blockingSubscribe();
