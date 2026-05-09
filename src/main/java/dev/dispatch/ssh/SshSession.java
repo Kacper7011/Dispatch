@@ -212,6 +212,15 @@ public class SshSession {
   }
 
   /**
+   * Opens a connected SFTP channel for use by {@code SftpFileSession}.
+   *
+   * @throws SshException if the session is not connected or JSch fails to open the channel
+   */
+  public com.jcraft.jsch.ChannelSftp openSftpChannel() {
+    return (com.jcraft.jsch.ChannelSftp) openJschChannel("sftp");
+  }
+
+  /**
    * Opens a raw JSch channel of the given type. Package-private — used by TunnelService.
    *
    * @throws SshException if the session is not connected or JSch fails to open the channel
