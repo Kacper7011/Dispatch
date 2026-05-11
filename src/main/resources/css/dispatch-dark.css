@@ -1588,3 +1588,67 @@
 .file-panel-session-btn .arrow {
   -fx-background-color: -cd-fg2;
 }
+
+/* Filter bar */
+.file-filter-bar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border;
+  -fx-border-width: 0 0 1 0;
+  -fx-min-height: 28px;
+  -fx-max-height: 28px;
+}
+
+.file-filter-toggle {
+  -fx-background-color: transparent;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-padding: 1 7 1 7;
+  -fx-cursor: hand;
+  -fx-min-width: 34px;
+}
+
+.file-filter-toggle:hover {
+  -fx-border-color: -cd-accent;
+  -fx-text-fill: -cd-fg;
+}
+
+.file-filter-toggle:selected {
+  -fx-background-color: rgba(126,184,186,0.12);
+  -fx-border-color: -cd-accent;
+  -fx-text-fill: -cd-accent;
+}
+
+.file-filter-field {
+  -fx-background-color: -cd-bg-highlight;
+  -fx-text-fill: -cd-fg;
+  -fx-border-color: -cd-border;
+  -fx-border-radius: 3;
+  -fx-background-radius: 3;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+  -fx-padding: 1 5 1 5;
+  -fx-pref-height: 20px;
+}
+
+.file-filter-field:focused {
+  -fx-border-color: -cd-accent;
+}
+
+.file-filter-clear {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+  -fx-background-radius: 3;
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 14px;
+  -fx-padding: 0 5 1 5;
+  -fx-cursor: hand;
+  -fx-min-width: 22px;
+}
+
+.file-filter-clear:hover {
+  -fx-text-fill: -cd-red;
+}
