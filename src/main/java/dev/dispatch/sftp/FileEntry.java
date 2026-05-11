@@ -3,9 +3,9 @@ package dev.dispatch.sftp;
 import java.time.LocalDateTime;
 
 /**
- * Immutable snapshot of a single file-system entry (file, directory, or symlink).
- * Used by both {@link LocalFileSession} and {@code SftpFileSession} so the UI layer stays
- * agnostic of the underlying transport.
+ * Immutable snapshot of a single file-system entry (file, directory, or symlink). Used by both
+ * {@link LocalFileSession} and {@code SftpFileSession} so the UI layer stays agnostic of the
+ * underlying transport.
  */
 public final class FileEntry {
 
@@ -50,8 +50,8 @@ public final class FileEntry {
   }
 
   /**
-   * Creates the synthetic ".." parent-navigation entry. {@code parentPath} is the path
-   * the panel should navigate to when this entry is activated.
+   * Creates the synthetic ".." parent-navigation entry. {@code parentPath} is the path the panel
+   * should navigate to when this entry is activated.
    */
   public static FileEntry parentLink(String parentPath) {
     return new FileEntry("..", parentPath, 0, true, false, true, null);

@@ -119,14 +119,14 @@ public class HostListController {
     MenuItem deleteItem = new MenuItem("Delete");
 
     connectItem.setOnAction(e -> fireConnect());
-    editItem.setOnAction(e -> {
-      Host selected = getSelectedHost();
-      if (selected != null) openForm(selected);
-    });
+    editItem.setOnAction(
+        e -> {
+          Host selected = getSelectedHost();
+          if (selected != null) openForm(selected);
+        });
     deleteItem.setOnAction(e -> confirmAndDelete());
 
-    ContextMenu menu = new ContextMenu(
-        connectItem, new SeparatorMenuItem(), editItem, deleteItem);
+    ContextMenu menu = new ContextMenu(connectItem, new SeparatorMenuItem(), editItem, deleteItem);
     hostListView.setContextMenu(menu);
   }
 

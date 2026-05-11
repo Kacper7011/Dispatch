@@ -31,7 +31,13 @@ class TransferTaskTest {
   void tearDown() throws IOException {
     Files.walk(tempDir)
         .sorted(Comparator.reverseOrder())
-        .forEach(p -> { try { Files.deleteIfExists(p); } catch (IOException ignored) {} });
+        .forEach(
+            p -> {
+              try {
+                Files.deleteIfExists(p);
+              } catch (IOException ignored) {
+              }
+            });
   }
 
   @Test
@@ -116,7 +122,10 @@ class TransferTaskTest {
 
     task.start()
         .subscribeOn(Schedulers.io())
-        .doOnNext(p -> { if (p.transferredBytes() > 0) task.cancel(); })
+        .doOnNext(
+            p -> {
+              if (p.transferredBytes() > 0) task.cancel();
+            })
         .blockingSubscribe(events::add, e -> {}, () -> {});
 
     // After cancellation the dest file may be partial but the task must not error

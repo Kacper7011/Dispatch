@@ -20,8 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link FileSession} implementation backed by JSch SFTP. One instance wraps one
- * {@link ChannelSftp} opened from an active {@link SshSession}.
+ * {@link FileSession} implementation backed by JSch SFTP. One instance wraps one {@link
+ * ChannelSftp} opened from an active {@link SshSession}.
  *
  * <p>Must be created and used from a virtual thread — all operations block.
  */
@@ -86,8 +86,7 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
     String name = entry.getFilename();
     String fullPath = dir.endsWith("/") ? dir + name : dir + "/" + name;
     LocalDateTime modified =
-        LocalDateTime.ofInstant(
-            Instant.ofEpochSecond(attrs.getMTime()), ZoneId.systemDefault());
+        LocalDateTime.ofInstant(Instant.ofEpochSecond(attrs.getMTime()), ZoneId.systemDefault());
     if (attrs.isLink()) {
       return FileEntry.symlink(name, fullPath, attrs.getSize(), modified);
     }

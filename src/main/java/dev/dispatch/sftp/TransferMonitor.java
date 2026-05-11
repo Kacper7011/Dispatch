@@ -16,8 +16,8 @@ public interface TransferMonitor {
   void onComplete();
 
   /**
-   * Polled by the transfer loop. Return {@code true} to abort the current transfer cleanly;
-   * the partial destination file is left in place.
+   * Polled by the transfer loop. Return {@code true} to abort the current transfer cleanly; the
+   * partial destination file is left in place.
    */
   boolean isCancelled();
 

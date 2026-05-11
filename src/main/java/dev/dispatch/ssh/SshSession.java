@@ -150,9 +150,9 @@ public class SshSession {
   }
 
   /**
-   * Executes a remote command, writing {@code stdinData} to stdin before capturing output.
-   * Suitable for short-lived commands such as {@code sudo -S mkdir …} where the password
-   * must be fed via stdin and all output fits comfortably in memory.
+   * Executes a remote command, writing {@code stdinData} to stdin before capturing output. Suitable
+   * for short-lived commands such as {@code sudo -S mkdir …} where the password must be fed via
+   * stdin and all output fits comfortably in memory.
    *
    * @throws SshException if the session is not connected or the channel cannot be opened
    */
@@ -192,9 +192,9 @@ public class SshSession {
   }
 
   /**
-   * Executes a remote command with streaming stdin and stdout. Reads {@code stdinStream}
-   * into the process stdin concurrently with draining process stdout into {@code stdoutSink},
-   * preventing deadlocks when both streams carry large payloads.
+   * Executes a remote command with streaming stdin and stdout. Reads {@code stdinStream} into the
+   * process stdin concurrently with draining process stdout into {@code stdoutSink}, preventing
+   * deadlocks when both streams carry large payloads.
    *
    * @return the remote process exit code
    * @throws SshException if the session is not connected or the channel cannot be opened
@@ -213,12 +213,16 @@ public class SshSession {
       channel.connect(EXEC_TIMEOUT_MS);
       // Pump stdin in a virtual thread to avoid deadlock with large stdout payloads.
       final OutputStream stdinRef = channelStdin;
-      Thread stdinPump = Thread.ofVirtual().start(() -> {
-        try {
-          stdinStream.transferTo(stdinRef);
-          stdinRef.close();
-        } catch (IOException ignored) {}
-      });
+      Thread stdinPump =
+          Thread.ofVirtual()
+              .start(
+                  () -> {
+                    try {
+                      stdinStream.transferTo(stdinRef);
+                      stdinRef.close();
+                    } catch (IOException ignored) {
+                    }
+                  });
       byte[] buf = new byte[8_192];
       int n;
       while ((n = channelStdout.read(buf)) != -1) {

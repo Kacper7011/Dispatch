@@ -25,8 +25,8 @@ import javafx.stage.Window;
  * the bar shows an indeterminate animation until {@link #setGrandTotal} is called with the real
  * value. An {@link AnimationTimer} polls volatile fields at ~60 fps for smooth real-time updates.
  *
- * <p>{@link #show} and {@link #hide} must be called on the FX thread.
- * {@link #updateAsync} and {@link #setGrandTotal} are safe from any thread.
+ * <p>{@link #show} and {@link #hide} must be called on the FX thread. {@link #updateAsync} and
+ * {@link #setGrandTotal} are safe from any thread.
  */
 public class TransferProgressDialog {
 
@@ -65,7 +65,10 @@ public class TransferProgressDialog {
 
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("transfer-cancel-btn");
-    cancelBtn.setOnAction(e -> { if (cancelAction != null) cancelAction.run(); });
+    cancelBtn.setOnAction(
+        e -> {
+          if (cancelAction != null) cancelAction.run();
+        });
 
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -79,25 +82,28 @@ public class TransferProgressDialog {
 
     Scene scene = new Scene(root);
     scene.setFill(Color.web("#161616"));
-    scene.getStylesheets().add(
-        getClass().getResource("/css/dispatch-dark.css").toExternalForm());
+    scene.getStylesheets().add(getClass().getResource("/css/dispatch-dark.css").toExternalForm());
     stage.setScene(scene);
 
-    renderTimer = new AnimationTimer() {
-      @Override
-      public void handle(long now) {
-        if (dirty) { dirty = false; render(); }
-      }
-    };
+    renderTimer =
+        new AnimationTimer() {
+          @Override
+          public void handle(long now) {
+            if (dirty) {
+              dirty = false;
+              render();
+            }
+          }
+        };
   }
 
   /**
    * Shows the dialog. Must be called on the FX thread.
    *
-   * @param filename  name of the first entry being transferred (shown immediately)
+   * @param filename name of the first entry being transferred (shown immediately)
    * @param grandTotal total bytes to transfer; if {@code > 0} the bar starts at 0% deterministic,
-   *                   otherwise shows indeterminate until {@link #setGrandTotal} is called
-   * @param onCancel  callback invoked on the FX thread when the user clicks Cancel
+   *     otherwise shows indeterminate until {@link #setGrandTotal} is called
+   * @param onCancel callback invoked on the FX thread when the user clicks Cancel
    */
   public void show(String filename, long grandTotal, Runnable onCancel) {
     cancelAction = onCancel;
@@ -149,8 +155,8 @@ public class TransferProgressDialog {
 
   /**
    * Records per-file progress into the total-transfer counters. {@code transferredBefore} is the
-   * sum of bytes from all items completed before this one. The running total is clamped so it
-   * never decreases (handles directory sub-file resets). Safe to call from any thread.
+   * sum of bytes from all items completed before this one. The running total is clamped so it never
+   * decreases (handles directory sub-file resets). Safe to call from any thread.
    */
   public void updateAsync(TransferProgress p, long transferredBefore, long grandTotal) {
     long newTotal = transferredBefore + p.transferredBytes();
@@ -162,7 +168,7 @@ public class TransferProgressDialog {
 
   private void render() {
     long current = latestCurrentTotal;
-    long grand   = latestGrandTotal;
+    long grand = latestGrandTotal;
     filenameLabel.setText(latestFilename);
     if (grand > 0) {
       bar.setProgress(Math.min(1.0, (double) current / grand));

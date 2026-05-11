@@ -5,9 +5,8 @@ import dev.dispatch.sftp.FileSession;
 import java.util.List;
 
 /**
- * Holds drag state for the duration of one drag-and-drop gesture inside the file manager.
- * A plain static holder is safe here because JavaFX drag gestures are single-threaded
- * and never overlap.
+ * Holds drag state for the duration of one drag-and-drop gesture inside the file manager. A plain
+ * static holder is safe here because JavaFX drag gestures are single-threaded and never overlap.
  */
 final class FileDragContext {
 
@@ -32,9 +31,9 @@ final class FileDragContext {
   }
 
   /**
-   * Returns {@code true} when the drop target is on the same host as the drag source.
-   * Compares {@link FileSession#sessionId()} so two separate SFTP channels to the same
-   * host are still treated as the same session (move semantics).
+   * Returns {@code true} when the drop target is on the same host as the drag source. Compares
+   * {@link FileSession#sessionId()} so two separate SFTP channels to the same host are still
+   * treated as the same session (move semantics).
    */
   static boolean isSameSession(FileSession target) {
     return sourceSession.sessionId().equals(target.sessionId());

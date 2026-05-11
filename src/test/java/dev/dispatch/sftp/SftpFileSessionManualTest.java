@@ -11,9 +11,8 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Manual integration test — requires a real SSH host.
- * Configure HOST/PORT/USERNAME/PASSWORD below, then run via:
- *   ./gradlew test --tests "dev.dispatch.sftp.SftpFileSessionManualTest"
+ * Manual integration test — requires a real SSH host. Configure HOST/PORT/USERNAME/PASSWORD below,
+ * then run via: ./gradlew test --tests "dev.dispatch.sftp.SftpFileSessionManualTest"
  */
 public class SftpFileSessionManualTest {
 

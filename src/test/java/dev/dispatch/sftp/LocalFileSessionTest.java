@@ -71,7 +71,8 @@ class LocalFileSessionTest {
     Files.createFile(tempDir.resolve("alpha.txt"));
     Files.createFile(tempDir.resolve("Gamma.txt"));
     List<FileEntry> entries = session.list(tempDir.toString());
-    List<String> names = entries.stream().filter(e -> !e.isParentLink()).map(FileEntry::getName).toList();
+    List<String> names =
+        entries.stream().filter(e -> !e.isParentLink()).map(FileEntry::getName).toList();
     assertEquals(List.of("alpha.txt", "Beta.txt", "Gamma.txt"), names);
   }
 
@@ -122,7 +123,8 @@ class LocalFileSessionTest {
 
     Path dest = tempDir.resolve("dest.txt");
     byte[] bytes = buf.toByteArray();
-    session.upload(new ByteArrayInputStream(bytes), dest.toString(), bytes.length, TransferMonitor.noop());
+    session.upload(
+        new ByteArrayInputStream(bytes), dest.toString(), bytes.length, TransferMonitor.noop());
 
     assertEquals("Hello, Dispatch!", Files.readString(dest, StandardCharsets.UTF_8));
   }
@@ -141,7 +143,8 @@ class LocalFileSessionTest {
     Path file = tempDir.resolve("sized.txt");
     Files.write(file, content);
     List<FileEntry> entries = session.list(tempDir.toString());
-    FileEntry entry = entries.stream().filter(e -> e.getName().equals("sized.txt")).findFirst().orElseThrow();
+    FileEntry entry =
+        entries.stream().filter(e -> e.getName().equals("sized.txt")).findFirst().orElseThrow();
     assertEquals(content.length, entry.getSize());
   }
 }

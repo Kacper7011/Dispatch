@@ -12,8 +12,9 @@ public class SftpException extends RuntimeException {
   }
 
   /**
-   * Returns {@code true} when the root cause is an SFTP permission-denied error (SSH_FX_PERMISSION_DENIED = 3).
-   * Allows the UI layer to detect access-denied without importing JSch types.
+   * Returns {@code true} when the root cause is an SFTP permission-denied error
+   * (SSH_FX_PERMISSION_DENIED = 3). Allows the UI layer to detect access-denied without importing
+   * JSch types.
    */
   public boolean isPermissionDenied() {
     Throwable cause = getCause();

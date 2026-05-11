@@ -22,8 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link FileSession} implementation backed by the local machine's filesystem via
- * {@code java.nio.file}. Stateless and reusable — {@link #close()} is a no-op.
+ * {@link FileSession} implementation backed by the local machine's filesystem via {@code
+ * java.nio.file}. Stateless and reusable — {@link #close()} is a no-op.
  */
 public final class LocalFileSession implements FileSession {
 
@@ -99,7 +99,8 @@ public final class LocalFileSession implements FileSession {
     Path dest = Paths.get(destPath);
     monitor.onStart(dest.getFileName().toString(), size);
     try (OutputStream out =
-        Files.newOutputStream(dest, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        Files.newOutputStream(
+            dest, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
       pump(in, out, monitor);
     } catch (IOException e) {
       throw new SftpException("Failed to write file: " + destPath, e);

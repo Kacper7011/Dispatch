@@ -16,8 +16,8 @@ import org.slf4j.LoggerFactory;
  * Represents a single file-copy or directory-copy operation between two {@link FileSession}
  * instances. Supports LOCAL↔REMOTE and REMOTE↔REMOTE transfers.
  *
- * <p>Obtain a cold {@link Observable} via {@link #start()} and subscribe on an I/O scheduler.
- * The observable emits {@link TransferProgress} snapshots and completes when all bytes have been
+ * <p>Obtain a cold {@link Observable} via {@link #start()} and subscribe on an I/O scheduler. The
+ * observable emits {@link TransferProgress} snapshots and completes when all bytes have been
  * written, or errors if the transfer fails.
  */
 public final class TransferTask {
@@ -48,9 +48,9 @@ public final class TransferTask {
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
   /**
-   * @param src      source session (local or remote)
-   * @param srcPath  full path of the file or directory to copy
-   * @param dest     destination session (local or remote)
+   * @param src source session (local or remote)
+   * @param srcPath full path of the file or directory to copy
+   * @param dest destination session (local or remote)
    * @param destPath full destination path (file name included)
    */
   public TransferTask(FileSession src, String srcPath, FileSession dest, String destPath) {
@@ -61,8 +61,8 @@ public final class TransferTask {
   }
 
   /**
-   * Returns a cold Observable that executes the transfer when subscribed.
-   * Must be subscribed on an I/O / virtual-thread scheduler — never on the FX thread.
+   * Returns a cold Observable that executes the transfer when subscribed. Must be subscribed on an
+   * I/O / virtual-thread scheduler — never on the FX thread.
    */
   public Observable<TransferProgress> start() {
     return Observable.create(
@@ -93,8 +93,8 @@ public final class TransferTask {
     return cancelled.get();
   }
 
-  private void transferFile(
-      String from, String to, ObservableEmitter<TransferProgress> emitter) throws IOException {
+  private void transferFile(String from, String to, ObservableEmitter<TransferProgress> emitter)
+      throws IOException {
     AtomicLong total = new AtomicLong(-1);
     AtomicLong transferred = new AtomicLong(0);
     String filename = nameOf(from);
@@ -138,9 +138,11 @@ public final class TransferTask {
   }
 
   private void copyDir(
-      String fromDir, String toDir,
+      String fromDir,
+      String toDir,
       ObservableEmitter<TransferProgress> emitter,
-      Set<String> visited) throws IOException {
+      Set<String> visited)
+      throws IOException {
     if (!dest.isDirectory(toDir)) {
       dest.mkdir(toDir);
     }

@@ -14,17 +14,16 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import javax.imageio.ImageIO;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,9 +86,9 @@ public class App extends Application {
    * Sets the application icon on all platforms.
    *
    * <p>Loads the source PNG once, then generates multiple pre-scaled variants so that the OS can
-   * pick the sharpest match for each context (window chrome ~16 px, taskbar ~32–48 px, Alt+Tab
-   * ~128 px). A single icon forces the OS to downscale with a low-quality algorithm, producing a
-   * blurry or apparently small icon.
+   * pick the sharpest match for each context (window chrome ~16 px, taskbar ~32–48 px, Alt+Tab ~128
+   * px). A single icon forces the OS to downscale with a low-quality algorithm, producing a blurry
+   * or apparently small icon.
    *
    * <p>On macOS the stage icon list is ignored by the OS; the dock icon is set via the AWT {@link
    * Taskbar} API instead.
@@ -139,7 +138,8 @@ public class App extends Application {
       BufferedImage src = ImageIO.read(new ByteArrayInputStream(pngBytes));
       BufferedImage dst = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
       Graphics2D g = dst.createGraphics();
-      g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+      g.setRenderingHint(
+          RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
       g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
       g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
       g.drawImage(src, 0, 0, size, size, null);

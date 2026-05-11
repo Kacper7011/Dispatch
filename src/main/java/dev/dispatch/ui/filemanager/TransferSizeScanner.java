@@ -7,8 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Recursively computes the total on-disk byte count for a batch of entries.
- * All methods block — call from a virtual thread, never from the FX thread.
+ * Recursively computes the total on-disk byte count for a batch of entries. All methods block —
+ * call from a virtual thread, never from the FX thread.
  */
 final class TransferSizeScanner {
 
@@ -17,8 +17,8 @@ final class TransferSizeScanner {
   private TransferSizeScanner() {}
 
   /**
-   * Returns the total size in bytes of all entries, recursing into directories.
-   * List errors are swallowed — the affected subtree counts as zero bytes.
+   * Returns the total size in bytes of all entries, recursing into directories. List errors are
+   * swallowed — the affected subtree counts as zero bytes.
    */
   static long scan(FileSession session, List<FileEntry> entries) {
     long total = 0;
