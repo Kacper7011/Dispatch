@@ -16,6 +16,7 @@ import dev.dispatch.ssh.SshException;
 import dev.dispatch.ssh.SshService;
 import dev.dispatch.ssh.SshSession;
 import dev.dispatch.ssh.TunnelService;
+import dev.dispatch.storage.AppSettingsRepository;
 import dev.dispatch.storage.DatabaseManager;
 import dev.dispatch.storage.HostRepository;
 import dev.dispatch.storage.SessionRepository;
@@ -92,6 +93,7 @@ public class MainController {
   private TunnelService tunnelService;
   private HostRepository hostRepository;
   private SessionRepository sessionRepository;
+  private AppSettingsRepository settingsRepository;
   private final Map<Long, DockerService> dockerServices = new ConcurrentHashMap<>();
 
   // ── Docker panel state ───────────────────────────────────────────────────────
@@ -124,6 +126,7 @@ public class MainController {
 
     this.hostRepository = new HostRepository(dbManager);
     this.sessionRepository = new SessionRepository(dbManager);
+    this.settingsRepository = new AppSettingsRepository(dbManager);
     hostListController.init(hostRepository, sshService);
     hostListController.setOnConnectAction(e -> onConnectRequested());
     hostListController.setOnOpenFileManager(this::showFileManagerDialog);
@@ -771,7 +774,7 @@ public class MainController {
 
   private void openFileManagerTab(FileSession left, FileSession right, String tabLabel) {
     FileManagerController ctrl =
-        new FileManagerController(left, right, this::buildAvailableSessions);
+        new FileManagerController(left, right, this::buildAvailableSessions, settingsRepository);
     Tab tab = new Tab(tabLabel);
     tab.setContent(ctrl.createNode());
     tab.setOnClosed(e -> ctrl.dispose());

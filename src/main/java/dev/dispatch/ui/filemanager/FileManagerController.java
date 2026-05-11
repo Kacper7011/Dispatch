@@ -5,6 +5,7 @@ import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
 import dev.dispatch.sftp.TransferTask;
 import dev.dispatch.sftp.TransferTask.TransferProgress;
+import dev.dispatch.storage.AppSettingsRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +37,7 @@ public class FileManagerController {
   private final FileSession leftDefault;
   private final FileSession rightDefault;
   private final Supplier<List<NamedSession>> sessionsSupplier;
+  private final AppSettingsRepository settingsRepo;
   private FilePanelController activePanel;
   private Node rootNode;
 
@@ -49,10 +51,14 @@ public class FileManagerController {
   private volatile TransferProgressDialog progressDialog;
 
   public FileManagerController(
-      FileSession left, FileSession right, Supplier<List<NamedSession>> sessions) {
+      FileSession left,
+      FileSession right,
+      Supplier<List<NamedSession>> sessions,
+      AppSettingsRepository settingsRepo) {
     this.leftDefault = left;
     this.rightDefault = right;
     this.sessionsSupplier = sessions;
+    this.settingsRepo = settingsRepo;
   }
 
   /**
@@ -67,6 +73,8 @@ public class FileManagerController {
       rootNode = loader.load();
       leftPanelController.init(leftDefault, () -> setActive(leftPanelController));
       rightPanelController.init(rightDefault, () -> setActive(rightPanelController));
+      leftPanelController.initSettings(settingsRepo, "left");
+      rightPanelController.initSettings(settingsRepo, "right");
       leftPanelController.setAvailableSessions(sessionsSupplier);
       rightPanelController.setAvailableSessions(sessionsSupplier);
       leftPanelController.installContextMenu(

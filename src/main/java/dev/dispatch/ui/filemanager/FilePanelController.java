@@ -7,6 +7,7 @@ import dev.dispatch.sftp.SftpFileSession;
 import dev.dispatch.sftp.SudoSshFileSession;
 import dev.dispatch.sftp.TransferTask;
 import dev.dispatch.sftp.TransferTask.TransferProgress;
+import dev.dispatch.storage.AppSettingsRepository;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -57,6 +58,7 @@ public class FilePanelController {
   @FXML private TextField pathField;
   @FXML private ToggleButton hideDotfilesBtn;
   @FXML private ToggleButton dirsOnlyBtn;
+  @FXML private ToggleButton filesOnlyBtn;
   @FXML private TextField filterField;
   @FXML private Button clearFilterBtn;
   @FXML private TableView<FileEntryRow> fileTable;
@@ -71,6 +73,10 @@ public class FilePanelController {
   private final ObservableList<FileEntryRow> items = FXCollections.observableArrayList();
   private final FilePanelFilter filter = new FilePanelFilter();
   private FilteredList<FileEntryRow> filteredItems;
+
+  private AppSettingsRepository settingsRepo;
+  private String panelId;
+  private boolean loadingFilterState = false;
 
   @FXML
   private void initialize() {
@@ -101,13 +107,25 @@ public class FilePanelController {
             (obs, o, n) -> {
               filter.hideHiddenProperty().set(n);
               applyFilter();
+              saveFilterState();
             });
     dirsOnlyBtn
         .selectedProperty()
         .addListener(
             (obs, o, n) -> {
+              if (n && filesOnlyBtn.isSelected()) filesOnlyBtn.setSelected(false);
               filter.dirsOnlyProperty().set(n);
               applyFilter();
+              saveFilterState();
+            });
+    filesOnlyBtn
+        .selectedProperty()
+        .addListener(
+            (obs, o, n) -> {
+              if (n && dirsOnlyBtn.isSelected()) dirsOnlyBtn.setSelected(false);
+              filter.filesOnlyProperty().set(n);
+              applyFilter();
+              saveFilterState();
             });
     filterField
         .textProperty()
@@ -480,7 +498,46 @@ public class FilePanelController {
     filter.reset();
     hideDotfilesBtn.setSelected(false);
     dirsOnlyBtn.setSelected(false);
+    filesOnlyBtn.setSelected(false);
     filterField.clear();
+  }
+
+  /**
+   * Wires filter-state persistence for this panel. Must be called from {@link
+   * FileManagerController} after {@link #init}. The {@code panelId} distinguishes left from right
+   * in the settings store (e.g. {@code "left"} or {@code "right"}).
+   */
+  public void initSettings(AppSettingsRepository repo, String panelId) {
+    this.settingsRepo = repo;
+    this.panelId = panelId;
+    loadFilterState();
+  }
+
+  private void loadFilterState() {
+    loadingFilterState = true;
+    hideDotfilesBtn.setSelected(settingsRepo.getBoolean(settingKey("hideHidden"), false));
+    dirsOnlyBtn.setSelected(settingsRepo.getBoolean(settingKey("dirsOnly"), false));
+    filesOnlyBtn.setSelected(settingsRepo.getBoolean(settingKey("filesOnly"), false));
+    loadingFilterState = false;
+    applyFilter();
+  }
+
+  private void saveFilterState() {
+    if (settingsRepo == null || loadingFilterState) return;
+    boolean hideHidden = filter.hideHiddenProperty().get();
+    boolean dirsOnly = filter.dirsOnlyProperty().get();
+    boolean filesOnly = filter.filesOnlyProperty().get();
+    Thread.ofVirtual()
+        .start(
+            () -> {
+              settingsRepo.setBoolean(settingKey("hideHidden"), hideHidden);
+              settingsRepo.setBoolean(settingKey("dirsOnly"), dirsOnly);
+              settingsRepo.setBoolean(settingKey("filesOnly"), filesOnly);
+            });
+  }
+
+  private String settingKey(String suffix) {
+    return "fm." + panelId + "." + suffix;
   }
 
   private void updateStatus() {

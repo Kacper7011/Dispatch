@@ -31,8 +31,9 @@
   <!-- Filter bar -->
   <HBox styleClass="file-filter-bar" alignment="CENTER_LEFT" spacing="4">
     <padding><Insets top="3" right="6" bottom="3" left="6"/></padding>
-    <ToggleButton fx:id="hideDotfilesBtn" styleClass="file-filter-toggle" text=".*" focusTraversable="false"/>
-    <ToggleButton fx:id="dirsOnlyBtn"     styleClass="file-filter-toggle" text="dir" focusTraversable="false"/>
+    <ToggleButton fx:id="hideDotfilesBtn" styleClass="file-filter-toggle" text=".*"   focusTraversable="false"/>
+    <ToggleButton fx:id="dirsOnlyBtn"     styleClass="file-filter-toggle" text="dir"  focusTraversable="false"/>
+    <ToggleButton fx:id="filesOnlyBtn"    styleClass="file-filter-toggle" text="file" focusTraversable="false"/>
     <TextField fx:id="filterField" styleClass="file-filter-field" promptText="filter…" HBox.hgrow="ALWAYS" focusTraversable="true"/>
     <Button fx:id="clearFilterBtn" styleClass="file-filter-clear" text="×" focusTraversable="false"/>
   </HBox>
