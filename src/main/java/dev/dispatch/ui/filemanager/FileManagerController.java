@@ -8,7 +8,6 @@ import dev.dispatch.sftp.TransferTask.TransferProgress;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import javafx.application.Platform;
@@ -43,11 +42,11 @@ public class FileManagerController {
   // Transfer state shared across transferSelected() and DnD callbacks
   private final AtomicReference<TransferTask> currentTask = new AtomicReference<>();
   private final AtomicBoolean transferCancelled = new AtomicBoolean(false);
-  private final AtomicInteger doneCount = new AtomicInteger(0);
-  private final AtomicInteger totalCount = new AtomicInteger(0);
+  // Stored by onDndBatchStart (FX thread) before the VT reads it in onDndProgress.
+  private volatile long dndGrandTotal;
 
-  // Created lazily on first transfer — needs owner Window from the scene
-  private TransferProgressDialog progressDialog;
+  // volatile so VT can safely call currentTotal() / setGrandTotal() after FX-thread creation.
+  private volatile TransferProgressDialog progressDialog;
 
   public FileManagerController(
       FileSession left, FileSession right, Supplier<List<NamedSession>> sessions) {
@@ -76,10 +75,12 @@ public class FileManagerController {
           this::onCopy, this::onMove, this::onMkdir, this::onDelete, this::onRename);
       leftPanelController.installDragAndDrop(
           this::onDndBatchStart, this::onDndItemStart,
-          this::onDndProgress, this::onDndItemDone, this::onDndBatchDone);
+          this::onDndProgress, this::onDndItemDone,
+          this::onDndBatchDone, this::onDndGrandTotalUpdate);
       rightPanelController.installDragAndDrop(
           this::onDndBatchStart, this::onDndItemStart,
-          this::onDndProgress, this::onDndItemDone, this::onDndBatchDone);
+          this::onDndProgress, this::onDndItemDone,
+          this::onDndBatchDone, this::onDndGrandTotalUpdate);
       setActive(leftPanelController);
       rootNode.setOnKeyPressed(this::handleKey);
       return rootNode;
@@ -179,41 +180,47 @@ public class FileManagerController {
     String destDir = target.getCurrentPath();
     FilePanelController srcPanel = activePanel;
 
-    int total = sel.size();
-    doneCount.set(0);
-    totalCount.set(total);
+    // Quick estimate from FileEntry sizes (correct for files, 0 for directories).
+    long roughTotal = sel.stream().mapToLong(FileEntry::getSize).sum();
     transferCancelled.set(false);
 
-    // Show dialog synchronously on FX thread before the VT starts — guarantees it
-    // is visible before the first progress update arrives via Platform.runLater.
-    getDialog().show(total, this::cancelTransfer);
+    TransferProgressDialog dialog = getDialog();
+    dialog.show(sel.get(0).getName(), roughTotal, this::cancelTransfer);
 
     Thread.ofVirtual().start(() -> {
+      // Scan accurate total when directories are present (roughTotal would be 0).
+      boolean hasDir = sel.stream().anyMatch(FileEntry::isDirectory);
+      final long grandTotal;
+      if (hasDir) {
+        grandTotal = TransferSizeScanner.scan(src, sel);
+        dialog.setGrandTotal(grandTotal);
+      } else {
+        grandTotal = roughTotal;
+      }
+
+      long transferredBefore = 0;
       for (FileEntry entry : sel) {
         if (transferCancelled.get()) break;
         String destPath = destDir + "/" + entry.getName();
         TransferTask task = new TransferTask(src, entry.getPath(), dest, destPath);
         currentTask.set(task);
+        final long before = transferredBefore;
         Throwable[] error = {null};
-        task.start().blockingSubscribe(
-            p -> {
-              int done = doneCount.get();
-              int tot = totalCount.get();
-              Platform.runLater(() -> getDialog().update(p, done, tot));
-            },
+        task.start().subscribe(
+            p -> dialog.updateAsync(p, before, grandTotal),
             e -> { log.error("Transfer failed: {}", entry.getPath(), e); error[0] = e; },
             () -> {});
         if (error[0] != null) {
           final Throwable err = error[0];
-          Platform.runLater(() -> { getDialog().hide(); showError("Transfer failed", err.getMessage()); });
+          Platform.runLater(() -> { dialog.hide(); showError("Transfer failed", err.getMessage()); });
           return;
         }
         if (move && !transferCancelled.get()) deleteQuietly(src, entry);
-        int done = doneCount.incrementAndGet();
-        int tot = totalCount.get();
-        Platform.runLater(() -> getDialog().updateCount(done, tot));
+        // Use the dialog's running total as the base for the next item — correct even for
+        // directories whose FileEntry.getSize() is 0.
+        transferredBefore = dialog.currentTotal();
       }
-      Platform.runLater(() -> { getDialog().hide(); srcPanel.refresh(); target.refresh(); });
+      Platform.runLater(() -> { dialog.hide(); srcPanel.refresh(); target.refresh(); });
     });
   }
 
@@ -227,12 +234,20 @@ public class FileManagerController {
 
   // ── DnD progress callbacks ────────────────────────────────────────────────────
 
-  /** Called from VT at the start of a DnD batch. */
-  private void onDndBatchStart(int total) {
-    doneCount.set(0);
-    totalCount.set(total);
+  /**
+   * Called on the FX thread immediately when a DnD drop is accepted. Shows the dialog in
+   * indeterminate state; the real total arrives via {@link #onDndGrandTotalUpdate}.
+   */
+  private void onDndBatchStart(long ignored) {
+    dndGrandTotal = 0;
     transferCancelled.set(false);
-    Platform.runLater(() -> getDialog().show(total, this::cancelTransfer));
+    getDialog().show("Transferring…", 0, this::cancelTransfer);
+  }
+
+  /** Called from VT after the size scan completes. Updates the bar to deterministic. */
+  private void onDndGrandTotalUpdate(long total) {
+    dndGrandTotal = total;
+    getDialog().setGrandTotal(total);
   }
 
   /** Called from VT when a new DnD item starts. */
@@ -240,23 +255,23 @@ public class FileManagerController {
     currentTask.set(task);
   }
 
-  /** Called from VT for each progress tick of the current DnD item. */
-  private void onDndProgress(TransferProgress p) {
-    int done = doneCount.get();
-    int tot = totalCount.get();
-    Platform.runLater(() -> getDialog().update(p, done, tot));
+  /** Called from VT for each progress tick. */
+  private void onDndProgress(TransferProgress p, Long transferredBefore) {
+    getDialog().updateAsync(p, transferredBefore, dndGrandTotal);
   }
 
-  /** Called from VT after each DnD item completes. */
-  private void onDndItemDone() {
-    int done = doneCount.incrementAndGet();
-    int tot = totalCount.get();
-    Platform.runLater(() -> getDialog().updateCount(done, tot));
+  /**
+   * Called from VT after each DnD item completes. Returns the dialog's running total so the
+   * caller can use it as {@code transferredBefore} for the next item (correct for directories
+   * whose {@link FileEntry#getSize()} is 0).
+   */
+  private long onDndItemDone() {
+    return getDialog().currentTotal();
   }
 
   /** Called from VT when the entire DnD batch completes. */
   private void onDndBatchDone() {
-    Platform.runLater(() -> getDialog().hide());
+    Platform.runLater(getDialog()::hide);
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

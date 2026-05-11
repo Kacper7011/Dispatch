@@ -1,13 +1,13 @@
 package dev.dispatch.ui.filemanager;
 
 import dev.dispatch.sftp.TransferTask.TransferProgress;
+import javafx.animation.AnimationTimer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -19,17 +19,31 @@ import javafx.stage.Window;
 
 /**
  * Non-modal floating progress window shown during file transfers.
- * All public methods must be called on the FX Application Thread.
+ *
+ * <p>The bar fills deterministically from left to right using total bytes transferred across the
+ * entire batch. When the grand total is unknown (directory transfers before a size scan completes),
+ * the bar shows an indeterminate animation until {@link #setGrandTotal} is called with the real
+ * value. An {@link AnimationTimer} polls volatile fields at ~60 fps for smooth real-time updates.
+ *
+ * <p>{@link #show} and {@link #hide} must be called on the FX thread.
+ * {@link #updateAsync} and {@link #setGrandTotal} are safe from any thread.
  */
 public class TransferProgressDialog {
 
   private final Stage stage;
-  private final Label countLabel;
-  private final ProgressBar overallBar;
   private final Label filenameLabel;
   private final Label bytesLabel;
-  private final ProgressBar fileBar;
+  private final ProgressBar bar;
   private Runnable cancelAction;
+
+  // Written by VT, read by AnimationTimer on FX thread — volatile for cross-thread visibility.
+  private volatile String latestFilename = "Starting…";
+  // Monotonically increasing: never decreases to avoid backward jumps on directory sub-files.
+  private volatile long latestCurrentTotal;
+  private volatile long latestGrandTotal;
+  private volatile boolean dirty;
+
+  private final AnimationTimer renderTimer;
 
   public TransferProgressDialog(Window owner) {
     stage = new Stage();
@@ -38,26 +52,16 @@ public class TransferProgressDialog {
     stage.setTitle("Transferring");
     stage.setResizable(false);
 
-    countLabel = new Label("0 / 0 items");
-    countLabel.getStyleClass().add("transfer-dialog-count");
-
-    overallBar = new ProgressBar(0);
-    overallBar.setMaxWidth(Double.MAX_VALUE);
-    overallBar.getStyleClass().add("transfer-dialog-bar");
-
-    Separator sep = new Separator();
-    sep.getStyleClass().add("transfer-dialog-sep");
-
-    filenameLabel = new Label();
+    filenameLabel = new Label("Starting…");
     filenameLabel.getStyleClass().add("transfer-dialog-filename");
     filenameLabel.setMaxWidth(360);
 
     bytesLabel = new Label();
     bytesLabel.getStyleClass().add("transfer-dialog-bytes");
 
-    fileBar = new ProgressBar(0);
-    fileBar.setMaxWidth(Double.MAX_VALUE);
-    fileBar.getStyleClass().add("transfer-dialog-bar");
+    bar = new ProgressBar(ProgressBar.INDETERMINATE_PROGRESS);
+    bar.setMaxWidth(Double.MAX_VALUE);
+    bar.getStyleClass().add("transfer-dialog-bar");
 
     Button cancelBtn = new Button("Cancel");
     cancelBtn.getStyleClass().add("transfer-cancel-btn");
@@ -68,13 +72,9 @@ public class TransferProgressDialog {
     HBox btnRow = new HBox(spacer, cancelBtn);
     btnRow.setAlignment(Pos.CENTER_RIGHT);
 
-    VBox root = new VBox(10,
-        countLabel, overallBar,
-        sep,
-        filenameLabel, bytesLabel, fileBar,
-        btnRow);
+    VBox root = new VBox(8, filenameLabel, bytesLabel, bar, btnRow);
     root.setPadding(new Insets(20, 24, 16, 24));
-    root.setMinWidth(400);
+    root.setMinWidth(420);
     root.getStyleClass().add("transfer-dialog-root");
 
     Scene scene = new Scene(root);
@@ -82,47 +82,110 @@ public class TransferProgressDialog {
     scene.getStylesheets().add(
         getClass().getResource("/css/dispatch-dark.css").toExternalForm());
     stage.setScene(scene);
+
+    renderTimer = new AnimationTimer() {
+      @Override
+      public void handle(long now) {
+        if (dirty) { dirty = false; render(); }
+      }
+    };
   }
 
-  /** Shows the dialog and resets all widgets. Must be called on FX thread. */
-  public void show(int total, Runnable onCancel) {
+  /**
+   * Shows the dialog. Must be called on the FX thread.
+   *
+   * @param filename  name of the first entry being transferred (shown immediately)
+   * @param grandTotal total bytes to transfer; if {@code > 0} the bar starts at 0% deterministic,
+   *                   otherwise shows indeterminate until {@link #setGrandTotal} is called
+   * @param onCancel  callback invoked on the FX thread when the user clicks Cancel
+   */
+  public void show(String filename, long grandTotal, Runnable onCancel) {
     cancelAction = onCancel;
-    countLabel.setText("0 / " + total + " items");
-    overallBar.setProgress(0);
-    filenameLabel.setText("Starting…");
-    bytesLabel.setText("");
-    fileBar.setProgress(0);
+    latestFilename = filename;
+    latestCurrentTotal = 0;
+    latestGrandTotal = grandTotal;
+    dirty = false;
+    filenameLabel.setText(filename);
+    if (grandTotal > 0) {
+      bar.setProgress(0.0);
+      bytesLabel.setText(formatTransferBytes(0, grandTotal));
+    } else {
+      bar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+      bytesLabel.setText("Scanning…");
+    }
+    renderTimer.start();
     if (!stage.isShowing()) stage.show();
   }
 
   /**
-   * Updates the per-file progress bar and byte counters.
-   * Called frequently during transfer — must be on FX thread.
+   * Updates the grand total after an asynchronous directory size scan. Safe to call from any
+   * thread. The bar switches from indeterminate to 0% deterministic on the next animation frame.
    */
-  public void update(TransferProgress p, int done, int total) {
-    countLabel.setText(done + " / " + total + " items");
-    overallBar.setProgress(total > 0 ? (double) done / total : 0);
-    filenameLabel.setText(p.filename());
-    double fileFraction = p.totalBytes() > 0
-        ? p.fraction() : ProgressBar.INDETERMINATE_PROGRESS;
-    fileBar.setProgress(fileFraction);
-    String xferred = formatBytes(p.transferredBytes());
-    String total_s = p.totalBytes() > 0 ? " / " + formatBytes(p.totalBytes()) : "";
-    bytesLabel.setText(xferred + total_s);
+  public void setGrandTotal(long total) {
+    latestGrandTotal = total;
+    dirty = true;
   }
 
-  /** Updates only the item count label (called after each item completes). */
-  public void updateCount(int done, int total) {
-    countLabel.setText(done + " / " + total + " items");
-    overallBar.setProgress(total > 0 ? (double) done / total : 0);
+  /**
+   * Returns the current accumulated bytes transferred across the batch. Safe to read from any
+   * thread. Use as the {@code transferredBefore} base for the next item in a transfer loop.
+   */
+  public long currentTotal() {
+    return latestCurrentTotal;
   }
 
+  /** Hides the dialog. Must be called on FX thread. */
   public void hide() {
+    renderTimer.stop();
+    dirty = false;
     stage.hide();
   }
 
+  /** Closes and disposes the Stage entirely. Must be called on FX thread. */
   public void close() {
+    renderTimer.stop();
     stage.close();
+  }
+
+  /**
+   * Records per-file progress into the total-transfer counters. {@code transferredBefore} is the
+   * sum of bytes from all items completed before this one. The running total is clamped so it
+   * never decreases (handles directory sub-file resets). Safe to call from any thread.
+   */
+  public void updateAsync(TransferProgress p, long transferredBefore, long grandTotal) {
+    long newTotal = transferredBefore + p.transferredBytes();
+    if (newTotal > latestCurrentTotal) latestCurrentTotal = newTotal;
+    latestGrandTotal = grandTotal;
+    latestFilename = p.filename();
+    dirty = true;
+  }
+
+  private void render() {
+    long current = latestCurrentTotal;
+    long grand   = latestGrandTotal;
+    filenameLabel.setText(latestFilename);
+    if (grand > 0) {
+      bar.setProgress(Math.min(1.0, (double) current / grand));
+      bytesLabel.setText(formatTransferBytes(current, grand));
+    } else {
+      bar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+      bytesLabel.setText(current > 0 ? "Scanning… " + formatBytes(current) : "Scanning…");
+    }
+  }
+
+  private static String formatTransferBytes(long current, long grand) {
+    if (grand >= 1_024L * 1_024 * 1_024) {
+      double f = 1_024.0 * 1_024 * 1_024;
+      return String.format("%.1f / %.1f GB", current / f, grand / f);
+    }
+    if (grand >= 1_024 * 1_024) {
+      double f = 1_024.0 * 1_024;
+      return String.format("%.1f / %.1f MB", current / f, grand / f);
+    }
+    if (grand >= 1_024) {
+      return String.format("%.0f / %.0f KB", current / 1_024.0, grand / 1_024.0);
+    }
+    return current + " / " + grand + " B";
   }
 
   private static String formatBytes(long bytes) {

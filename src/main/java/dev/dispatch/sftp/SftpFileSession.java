@@ -31,6 +31,7 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
 
   private final ChannelSftp sftp;
   private final String displayName;
+  private final SshSession sshSession;
 
   /**
    * Opens an SFTP channel on the given connected SSH session.
@@ -39,6 +40,7 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
    */
   public SftpFileSession(SshSession session) {
     this.displayName = session.getHost().getName();
+    this.sshSession = session;
     try {
       ChannelSftp channel = session.openSftpChannel();
       channel.connect();
@@ -186,6 +188,11 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
     }
   }
 
+  /** Returns the underlying {@link SshSession} so an elevated sudo session can reuse it. */
+  public dev.dispatch.ssh.SshSession getUnderlyingSession() {
+    return sshSession;
+  }
+
   @Override
   public void close() {
     if (sftp.isConnected()) {
@@ -204,16 +211,19 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
   private SftpProgressMonitor toSftpMonitor(TransferMonitor monitor) {
     return new SftpProgressMonitor() {
       private String filename;
+      private long cumulative;
 
       @Override
       public void init(int op, String src, String dest, long max) {
         filename = src.contains("/") ? src.substring(src.lastIndexOf('/') + 1) : src;
+        cumulative = 0;
         monitor.onStart(filename, max);
       }
 
       @Override
-      public boolean count(long bytes) {
-        monitor.onProgress(bytes);
+      public boolean count(long chunkBytes) {
+        // JSch passes per-chunk bytes; TransferMonitor expects cumulative.
+        monitor.onProgress(cumulative += chunkBytes);
         return !monitor.isCancelled();
       }
 

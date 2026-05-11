@@ -534,6 +534,23 @@
   -fx-padding: 0 16 14 16;
 }
 
+/* ── Sudo elevation dialog ───────────────────────────────────────────────── */
+
+.sudo-dialog .dialog-pane {
+  -fx-padding: 20 24 8 24;
+  -fx-min-width: 380px;
+}
+
+.sudo-dialog-info {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-size: 12px;
+  -fx-line-spacing: 2px;
+}
+
+.sudo-dialog-password {
+  -fx-pref-width: 330px;
+}
+
 /* ============================================================
    Host form
    ============================================================ */
@@ -1351,46 +1368,39 @@
   -fx-background-color: #161616;
 }
 
-.transfer-dialog-count {
+.transfer-dialog-filename {
   -fx-text-fill: -cd-fg;
   -fx-font-family: -cd-mono;
-  -fx-font-size: 15px;
-  -fx-font-weight: bold;
+  -fx-font-size: 12px;
 }
 
-.transfer-dialog-filename {
+.transfer-dialog-bytes {
   -fx-text-fill: -cd-fg-dim;
   -fx-font-family: -cd-mono;
   -fx-font-size: 11px;
 }
 
-.transfer-dialog-bytes {
-  -fx-text-fill: -cd-fg3;
-  -fx-font-family: -cd-mono;
-  -fx-font-size: 11px;
-}
-
-.transfer-dialog-sep {
-  -fx-background-color: -cd-border;
-  -fx-pref-height: 1;
-  -fx-border-color: transparent;
-}
-
 .transfer-dialog-bar {
-  -fx-pref-height: 6px;
+  -fx-pref-height: 10px;
 }
 
 .transfer-dialog-bar .bar {
-  -fx-background-color: -cd-accent;
-  -fx-background-radius: 3;
+  -fx-background-color: linear-gradient(
+    to bottom,
+    derive(-cd-accent, 28%) 0%,
+    -cd-accent 100%
+  );
+  -fx-background-radius: 5;
   -fx-background-insets: 0;
+  -fx-effect: dropshadow(gaussian, rgba(126,184,186,0.55), 8, 0.35, 0, 0);
 }
 
 .transfer-dialog-bar .track {
-  -fx-background-color: -cd-bg-highlight;
-  -fx-background-radius: 3;
+  -fx-background-color: rgba(255,255,255,0.05);
+  -fx-background-radius: 5;
   -fx-background-insets: 0;
 }
+
 
 .transfer-cancel-btn {
   -fx-background-color: rgba(212, 126, 126, 0.12);
@@ -1532,6 +1542,14 @@
   -fx-font-size: 12px;
   -fx-padding: 0 6 0 6;
   -fx-border-color: transparent;
+}
+
+.file-table .file-size-cell {
+  -fx-text-fill: -cd-fg2;
+}
+
+.file-table .table-row-cell:selected .file-size-cell {
+  -fx-text-fill: -cd-fg;
 }
 
 /* Active panel: accent left border on the table */

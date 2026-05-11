@@ -3,11 +3,15 @@ package dev.dispatch.ui.filemanager;
 import dev.dispatch.sftp.FileEntry;
 import dev.dispatch.sftp.FileSession;
 import dev.dispatch.sftp.SftpException;
+import dev.dispatch.sftp.SftpFileSession;
+import dev.dispatch.sftp.SudoSshFileSession;
 import dev.dispatch.sftp.TransferTask;
 import dev.dispatch.sftp.TransferTask.TransferProgress;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.IntConsumer;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
@@ -23,12 +27,14 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.ClipboardContent;
+import javafx.stage.Window;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
@@ -61,6 +67,14 @@ public class FilePanelController {
   private void initialize() {
     nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
     sizeColumn.setCellValueFactory(new PropertyValueFactory<>("size"));
+    sizeColumn.setCellFactory(col -> new TableCell<>() {
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        setText(empty ? null : item);
+      }
+      { getStyleClass().add("file-size-cell"); }
+    });
     dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
     fileTable.setItems(items);
     fileTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -135,10 +149,37 @@ public class FilePanelController {
           }
         });
       } catch (SftpException e) {
-        log.warn("Cannot list {}: {}", path, e.getMessage());
-        Platform.runLater(() -> statusLabel.setText("Błąd: " + e.getMessage()));
+        if (e.isPermissionDenied() && !(session instanceof SudoSshFileSession)) {
+          Platform.runLater(() -> promptForSudo(path));
+        } else {
+          log.warn("Cannot list {}: {}", path, e.getMessage());
+          Platform.runLater(() -> statusLabel.setText("Błąd: " + e.getMessage()));
+        }
       }
     });
+  }
+
+  /**
+   * Shows the sudo password dialog and, on success, switches this panel to a
+   * {@link SudoSshFileSession} and retries navigation to {@code path}.
+   * Must be called on the FX Application Thread.
+   */
+  private void promptForSudo(String path) {
+    if (!(session instanceof SftpFileSession sftp)) {
+      statusLabel.setText("Brak dostępu: " + path);
+      return;
+    }
+    Window window = fileTable.getScene() != null ? fileTable.getScene().getWindow() : null;
+    new SudoPasswordDialog(path, window).showAndWait()
+        .filter(pw -> pw != null && !pw.isEmpty())
+        .ifPresent(password -> {
+          SudoSshFileSession sudoSession =
+              new SudoSshFileSession(sftp.getUnderlyingSession(), password);
+          closeQuietly(sftp);
+          session = sudoSession;
+          sessionBtn.setText(sudoSession.displayName());
+          navigate(path);
+        });
   }
 
   /** Re-lists the current directory (called after transfers, mkdir, delete, rename). */
@@ -220,17 +261,25 @@ public class FilePanelController {
 
   /**
    * Sets up drag-and-drop on this panel. Must be called after {@link #init} and
-   * {@link #installContextMenu}. The three callbacks are wired to the progress bar
-   * in {@link FileManagerController}.
+   * {@link #installContextMenu}. The callbacks wire progress reporting to
+   * {@link FileManagerController}.
    *
    * <p>Logic: same session instance → move; different sessions → copy.
+   *
+   * @param onBatchStart        called on the FX thread with {@code 0} to show the dialog
+   *                            immediately; the real total arrives via {@code onGrandTotalUpdate}
+   * @param onProgress          called from VT with (progress, transferredBefore) per progress event
+   * @param onItemDone          called from VT after each item; returns the running byte total so
+   *                            the caller can use it as {@code transferredBefore} for the next item
+   * @param onGrandTotalUpdate  called from VT after the recursive size scan completes
    */
   public void installDragAndDrop(
-      IntConsumer onBatchStart,
+      LongConsumer onBatchStart,
       Consumer<TransferTask> onItemStart,
-      Consumer<TransferProgress> onProgress,
-      Runnable onItemDone,
-      Runnable onBatchDone) {
+      BiConsumer<TransferProgress, Long> onProgress,
+      LongSupplier onItemDone,
+      Runnable onBatchDone,
+      LongConsumer onGrandTotalUpdate) {
     fileTable.setOnDragDetected(e -> {
       List<FileEntry> sel = getSelectedEntries();
       if (sel.isEmpty()) return;
@@ -268,15 +317,23 @@ public class FilePanelController {
       FileDragContext.clear();
       fileTable.getStyleClass().remove("file-panel-drag-target");
       FileSession destSession = session;
+
+      onBatchStart.accept(0); // FX thread — show dialog immediately; real total arrives below
+
       Thread.ofVirtual().start(() -> {
-        onBatchStart.accept(dragged.size());
+        // Scan accurate total upfront so the bar is deterministic from the first byte.
+        long scannedTotal = TransferSizeScanner.scan(srcSession, dragged);
+        onGrandTotalUpdate.accept(scannedTotal);
+
+        long[] transferredBefore = {0};
         for (FileEntry entry : dragged) {
           String destPath = destDir + "/" + entry.getName();
           TransferTask task = new TransferTask(srcSession, entry.getPath(), destSession, destPath);
           onItemStart.accept(task);
+          final long before = transferredBefore[0];
           Throwable[] error = {null};
-          task.start().blockingSubscribe(
-              onProgress::accept,
+          task.start().subscribe(
+              p -> onProgress.accept(p, before),
               err -> { log.error("DnD transfer failed: {}", entry.getPath(), err); error[0] = err; },
               () -> {});
           if (error[0] != null) {
@@ -290,7 +347,8 @@ public class FilePanelController {
             try { srcSession.delete(entry.getPath(), true); }
             catch (SftpException ex) { log.error("DnD delete failed", ex); }
           }
-          onItemDone.run();
+          // Use the dialog's running total — correct even for directories (size == 0 in FileEntry).
+          transferredBefore[0] = onItemDone.getAsLong();
         }
         onBatchDone.run();
         Platform.runLater(() -> {

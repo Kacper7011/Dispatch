@@ -150,6 +150,97 @@ public class SshSession {
   }
 
   /**
+   * Executes a remote command, writing {@code stdinData} to stdin before capturing output.
+   * Suitable for short-lived commands such as {@code sudo -S mkdir …} where the password
+   * must be fed via stdin and all output fits comfortably in memory.
+   *
+   * @throws SshException if the session is not connected or the channel cannot be opened
+   */
+  public ExecResult execWithStdin(String command, byte[] stdinData) {
+    requireConnected();
+    log.debug("execWithStdin on {}: {}", host.getName(), command);
+    ChannelExec channel = null;
+    try {
+      channel = (ChannelExec) jschSession.openChannel("exec");
+      channel.setCommand(command);
+      ByteArrayOutputStream stdoutBuf = new ByteArrayOutputStream();
+      ByteArrayOutputStream stderrBuf = new ByteArrayOutputStream();
+      channel.setOutputStream(stdoutBuf);
+      channel.setErrStream(stderrBuf);
+      // getOutputStream() must be called before connect() in JSch.
+      OutputStream channelStdin = channel.getOutputStream();
+      channel.connect(EXEC_TIMEOUT_MS);
+      channelStdin.write(stdinData);
+      channelStdin.flush();
+      channelStdin.close();
+      long deadline = System.currentTimeMillis() + EXEC_TIMEOUT_MS;
+      while (!channel.isClosed() && System.currentTimeMillis() < deadline) {
+        Thread.sleep(50);
+      }
+      return new ExecResult(
+          stdoutBuf.toString(StandardCharsets.UTF_8),
+          stderrBuf.toString(StandardCharsets.UTF_8),
+          channel.getExitStatus());
+    } catch (JSchException | IOException e) {
+      throw new SshException("execWithStdin failed on " + host.getName() + ": " + command, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new SshException("execWithStdin interrupted on " + host.getName(), e);
+    } finally {
+      if (channel != null) channel.disconnect();
+    }
+  }
+
+  /**
+   * Executes a remote command with streaming stdin and stdout. Reads {@code stdinStream}
+   * into the process stdin concurrently with draining process stdout into {@code stdoutSink},
+   * preventing deadlocks when both streams carry large payloads.
+   *
+   * @return the remote process exit code
+   * @throws SshException if the session is not connected or the channel cannot be opened
+   */
+  public int execStreaming(String command, InputStream stdinStream, OutputStream stdoutSink) {
+    requireConnected();
+    log.debug("execStreaming on {}: {}", host.getName(), command);
+    ChannelExec channel = null;
+    try {
+      channel = (ChannelExec) jschSession.openChannel("exec");
+      channel.setCommand(command);
+      InputStream channelStdout = channel.getInputStream();
+      ByteArrayOutputStream stderrBuf = new ByteArrayOutputStream();
+      channel.setErrStream(stderrBuf);
+      OutputStream channelStdin = channel.getOutputStream();
+      channel.connect(EXEC_TIMEOUT_MS);
+      // Pump stdin in a virtual thread to avoid deadlock with large stdout payloads.
+      final OutputStream stdinRef = channelStdin;
+      Thread stdinPump = Thread.ofVirtual().start(() -> {
+        try {
+          stdinStream.transferTo(stdinRef);
+          stdinRef.close();
+        } catch (IOException ignored) {}
+      });
+      byte[] buf = new byte[8_192];
+      int n;
+      while ((n = channelStdout.read(buf)) != -1) {
+        stdoutSink.write(buf, 0, n);
+      }
+      stdinPump.join();
+      long deadline = System.currentTimeMillis() + EXEC_TIMEOUT_MS;
+      while (!channel.isClosed() && System.currentTimeMillis() < deadline) {
+        Thread.sleep(50);
+      }
+      return channel.getExitStatus();
+    } catch (JSchException | IOException e) {
+      throw new SshException("execStreaming failed on " + host.getName() + ": " + command, e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new SshException("execStreaming interrupted on " + host.getName(), e);
+    } finally {
+      if (channel != null) channel.disconnect();
+    }
+  }
+
+  /**
    * Opens an interactive PTY shell channel.
    *
    * @param columns initial terminal width in characters
