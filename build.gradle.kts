@@ -60,6 +60,9 @@ dependencies {
   // Reactive streams
   implementation("io.reactivex.rxjava3:rxjava:3.1.8")
 
+  // Syntax-highlighted code editor (viewer/editor dialog)
+  implementation("org.fxmisc.richtext:richtextfx:0.11.3")
+
   // Logging
   implementation("org.slf4j:slf4j-api:2.0.12")
   runtimeOnly("ch.qos.logback:logback-classic:1.5.3")

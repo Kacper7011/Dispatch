@@ -88,6 +88,12 @@ public final class SftpFileSession implements dev.dispatch.sftp.FileSession {
     LocalDateTime modified =
         LocalDateTime.ofInstant(Instant.ofEpochSecond(attrs.getMTime()), ZoneId.systemDefault());
     if (attrs.isLink()) {
+      try {
+        SftpATTRS target = sftp.stat(fullPath);
+        if (target.isDir()) return FileEntry.directory(name, fullPath, modified);
+      } catch (SftpException ignored) {
+        // broken symlink — keep as symlink entry
+      }
       return FileEntry.symlink(name, fullPath, attrs.getSize(), modified);
     }
     if (attrs.isDir()) {

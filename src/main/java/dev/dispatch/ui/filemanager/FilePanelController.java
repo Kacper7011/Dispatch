@@ -480,7 +480,12 @@ public class FilePanelController {
     FileEntryRow row = fileTable.getSelectionModel().getSelectedItem();
     if (row == null) return;
     FileEntry entry = row.getEntry();
-    if (entry.isDirectory() || entry.isParentLink()) navigate(entry.getPath());
+    if (entry.isDirectory() || entry.isParentLink()) {
+      navigate(entry.getPath());
+    } else {
+      Window owner = fileTable.getScene() != null ? fileTable.getScene().getWindow() : null;
+      new FileViewerStage(entry, session, owner).show();
+    }
   }
 
   private void navigateToParent() {

@@ -1656,3 +1656,99 @@
 .file-filter-clear:hover {
   -fx-text-fill: -cd-red;
 }
+
+/* ── File viewer / editor ──────────────────────────────────────────────────── */
+
+.file-viewer-root {
+  -fx-background-color: -cd-bg;
+}
+
+.file-viewer-toolbar {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 0 0 1 0;
+}
+
+.file-viewer-name {
+  -fx-text-fill: -cd-fg;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 12px;
+  -fx-font-weight: bold;
+}
+
+.file-viewer-dirty {
+  -fx-text-fill: -cd-yellow;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+}
+
+.file-viewer-enc {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+}
+
+.file-viewer-save {
+  -fx-background-color: rgba(126, 184, 186, 0.12);
+  -fx-text-fill: -cd-accent;
+  -fx-border-color: rgba(126, 184, 186, 0.35);
+  -fx-border-width: 1;
+  -fx-border-radius: 4;
+  -fx-background-radius: 4;
+  -fx-font-size: 11px;
+  -fx-padding: 2 12 2 12;
+  -fx-cursor: hand;
+}
+
+.file-viewer-save:hover {
+  -fx-background-color: rgba(126, 184, 186, 0.22);
+  -fx-border-color: rgba(126, 184, 186, 0.55);
+}
+
+.file-viewer-save:disabled {
+  -fx-opacity: 0.35;
+}
+
+/* CodeArea container */
+.file-viewer-area {
+  -fx-background-color: -cd-bg;
+}
+
+.file-viewer-area .content {
+  -fx-background-color: -cd-bg;
+}
+
+.file-viewer-area .text {
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 12px;
+  -fx-fill: -cd-fg;
+}
+
+.file-viewer-area .caret {
+  -fx-stroke: -cd-accent;
+}
+
+.file-viewer-area .selection {
+  -fx-fill: rgba(126, 184, 186, 0.2);
+}
+
+/* Syntax token colours — -fx-fill because these are Text spans, not Labels */
+.file-viewer-area .keyword   { -fx-fill: -cd-blue;    }
+.file-viewer-area .string    { -fx-fill: -cd-green;   }
+.file-viewer-area .comment   { -fx-fill: -cd-fg-dim2; }
+.file-viewer-area .number    { -fx-fill: -cd-yellow;  }
+.file-viewer-area .directive { -fx-fill: -cd-purple;  }
+.file-viewer-area .key       { -fx-fill: -cd-cyan;    }
+
+/* Status bar */
+.file-viewer-status {
+  -fx-background-color: -cd-bg-alt;
+  -fx-border-color: -cd-border2;
+  -fx-border-width: 1 0 0 0;
+}
+
+.file-viewer-status-text {
+  -fx-text-fill: -cd-fg-dim;
+  -fx-font-family: -cd-mono;
+  -fx-font-size: 11px;
+}
