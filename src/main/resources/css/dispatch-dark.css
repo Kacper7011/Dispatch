@@ -1358,8 +1358,12 @@
 }
 
 .file-manager-divider {
-  -fx-background-color: -cd-border2;
-  -fx-pref-width: 1;
+  -fx-background-color: -cd-bg-alt;
+  -fx-pref-width: 5;
+}
+
+.file-manager-divider .line {
+  -fx-background-color: rgba(126, 184, 186, 0.28);
 }
 
 /* ── Transfer progress popup dialog ────────────────────────────────────────── */
@@ -1545,7 +1549,7 @@
 }
 
 .file-table .file-size-cell {
-  -fx-text-fill: -cd-fg2;
+  -fx-text-fill: -cd-fg;
 }
 
 .file-table .table-row-cell:selected .file-size-cell {
